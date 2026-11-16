@@ -33,6 +33,7 @@ jobs:
         working-directory: frontend
         run: |
           npm install
+          npm test
           npm run build
 
   docker:
