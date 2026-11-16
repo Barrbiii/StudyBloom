@@ -1,6 +1,8 @@
 import React from 'react';
 import { createRoot } from 'react-dom/client';
 import './style.css';
+import { Calendar } from './Calendar';
+import { Calendar } from './Calendar';
 
 type Task = { id: number; title: string; completed: boolean };
 type Subject = { id: number; name: string; color: string };
@@ -186,6 +188,8 @@ function App() {
       </div>)}
       {deadlines.length === 0 && <p className="note">Пока нет дедлайнов. Можно выдохнуть 🌷</p>}
     </section>
+    <Calendar subjects={subjects} deadlines={deadlines} onSaved={loadStudy} />
+    <Calendar subjects={subjects} deadlines={deadlines} onSaved={loadStudy} />
     <footer>Bloom at your own pace ✿</footer>
   </main>;
 }
