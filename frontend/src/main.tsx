@@ -2,6 +2,8 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import './style.css';
 import { Calendar } from './Calendar';
+import { BloomMark, FlowerSprig } from './Decorations';
+import { dateKey, parseDate } from './calendarDates';
 
 type Task = { id: number; title: string; completed: boolean };
 type Subject = { id: number; name: string; color: string };
@@ -132,20 +134,45 @@ function App() {
     }
   }
 
-  return <main>
-    <header><span>✿ StudyBloom</span><small>your little space to grow ♡</small></header>
-    <section className="hero">
-      <p>SMALL STEPS, BIG DREAMS ✨</p>
-      <h1>Привет, солнышко! 🌷</h1>
-      <p>Каждый маленький шаг приближает тебя к мечте.</p>
-    </section>
-    <section className="panel">
-      <h2>Мои задачи ♡</h2>
+  const completed = tasks.filter(task => task.completed).length;
+  const progress = tasks.length ? Math.round(completed / tasks.length * 100) : 0;
+  const today = dateKey(new Date());
+  const upcoming = deadlines.filter(deadline => deadline.due_date >= today);
+  const nearest = upcoming[0];
+
+  return <div className="app-shell">
+    <a className="skip-link" href="#overview">Перейти к содержимому</a>
+    <aside className="sidebar" aria-label="StudyBloom">
+      <a href="#overview" className="brand"><BloomMark /><span>StudyBloom<small>место для твоего роста</small></span></a>
+      <p className="nav-caption">ТВОЙ ЕЖЕДНЕВНИК</p>
+      <nav aria-label="Основная навигация">
+        <a href="#overview"><span aria-hidden="true">⌂</span>Обзор</a>
+        <a href="#tasks"><span aria-hidden="true">✓</span>Мои задачи</a>
+        <a href="#calendar"><span aria-hidden="true">▦</span>Календарь</a>
+        <a href="#subjects"><span aria-hidden="true">♧</span>Предметы</a>
+        <a href="#deadlines"><span aria-hidden="true">◷</span>Дедлайны</a>
+      </nav>
+      <div className="sidebar-note"><FlowerSprig /><p>Расцветай<br /><em>в своём темпе.</em></p><span>один маленький шаг за раз</span></div>
+      <small className="sidebar-footer">С заботой о твоих планах ♡</small>
+    </aside>
+    <main id="overview">
+      <header className="page-header"><span className="eyebrow">ПЛАНИРУЙ · УЧИСЬ · РАСЦВЕТАЙ</span><time dateTime={today}>{new Date().toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', weekday: 'long' })}</time></header>
+      <section className="hero">
+        <div><p className="eyebrow">ТВОЯ НОВАЯ СТРАНИЦА</p><h1>Большие мечты.<br /><em>Маленькие шаги.</em></h1><p className="hero-description">Освободи место для важного. Собери задачи и учебные планы<br className="desktop-break" /> в одном уютном месте — и двигайся в своём ритме.</p><a className="primary-link" href="#tasks">Запланировать день <span aria-hidden="true">↗</span></a></div>
+        <div className="hero-art" aria-hidden="true"><span className="art-caption">a little progress, every day</span><FlowerSprig /><span className="art-star">✧</span><span className="art-heart">♡</span></div>
+      </section>
+      {error && <p role="alert" className="error-banner">{error}</p>}
+      <section className="overview-grid" aria-label="Обзор планов">
+        <article className="overview-card"><span className="card-kicker">МАЛЕНЬКИЕ ПОБЕДЫ</span><div className="stat-value">{loading ? '…' : `${completed} / ${tasks.length}`}<span>задач выполнено</span></div><div className="progress-track" role="progressbar" aria-label="Выполненные задачи" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}><span style={{ width: `${progress}%` }} /></div><p>{tasks.length ? 'Каждая галочка — ещё один шаг вперёд.' : 'Всё начинается с первой маленькой задачи.'}</p></article>
+        <article className="overview-card next-deadline"><span className="card-kicker">НА ГОРИЗОНТЕ</span><h2>{nearest?.title || 'Место для новых планов'}</h2><p>{nearest ? `${subjects.find(subject => subject.id === nearest.subject_id)?.name || 'Предмет'} · ${parseDate(nearest.due_date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}` : 'Добавь дедлайн — мы сохраним его в календаре.'}</p><a href="#deadlines">{nearest ? 'Открыть дедлайны' : 'Добавить дедлайн'} <span aria-hidden="true">↗</span></a></article>
+      </section>
+      <div className="planner-grid">
+    <section className="panel tasks-panel" id="tasks">
+      <div className="panel-heading"><div><p className="card-kicker">ШАГ ЗА ШАГОМ</p><h2>Мои задачи</h2></div><span className="count-badge">{tasks.length}</span></div>
       <form onSubmit={addTask}>
         <input aria-label="Название задачи" placeholder="Добавить задачу..." value={draft} onChange={e => setDraft(e.target.value)} />
         <button type="submit">Добавить +</button>
       </form>
-      {error && <p role="alert" className="note">{error}</p>}
       {loading && <p className="note">Загружаем задачи...</p>}
       {!loading && tasks.length === 0 && <p className="note">Пока нет задач. Добавь первую 🌸</p>}
       {tasks.map(task => <div key={task.id} className={task.completed ? 'task done' : 'task'}>
@@ -155,10 +182,10 @@ function App() {
         </label>
         <button type="button" className="delete-task" aria-label={`Удалить: ${task.title}`} onClick={() => void removeTask(task)}>×</button>
       </div>)}
-      <p className="note">Задачи сохраняются в PostgreSQL.</p>
+      <p className="panel-footnote">Не обязательно успеть всё. Начни с самого важного.</p>
     </section>
-    <section className="panel">
-      <h2>Мои предметы 📚</h2>
+    <section className="panel subjects-panel" id="subjects">
+      <p className="card-kicker">ТВОЙ УЧЕБНЫЙ МИР</p><h2>Мои предметы</h2>
       <form onSubmit={addSubject}>
         <input aria-label="Название предмета" placeholder="Например, математика" value={subjectDraft} onChange={e => setSubjectDraft(e.target.value)} />
         <button type="submit">Добавить предмет</button>
@@ -170,8 +197,8 @@ function App() {
       </div>
       {subjects.length === 0 && <p className="note">Добавь предмет, чтобы назначать дедлайны.</p>}
     </section>
-    <section className="panel">
-      <h2>Ближайшие дедлайны 🗓️</h2>
+    <section className="panel deadlines-panel" id="deadlines">
+      <p className="card-kicker">ВСЕМУ СВОЁ ВРЕМЯ</p><h2>Дедлайны</h2>
       <form onSubmit={addDeadline} className="deadline-form">
         <input aria-label="Название дедлайна" placeholder="Что нужно сдать?" value={deadlineDraft} onChange={e => setDeadlineDraft(e.target.value)} />
         <input aria-label="Дата дедлайна" type="date" value={deadlineDate} onChange={e => setDeadlineDate(e.target.value)} required />
@@ -182,14 +209,15 @@ function App() {
         <button type="submit" disabled={subjects.length === 0}>Добавить</button>
       </form>
       {deadlines.map(deadline => <div className="deadline-row" key={deadline.id}>
-        <span><strong>{deadline.title}</strong><small>{subjects.find(s => s.id === deadline.subject_id)?.name || 'Предмет удалён'} · {deadline.due_date}</small></span>
+        <span><strong>{deadline.title}</strong><small>{subjects.find(s => s.id === deadline.subject_id)?.name || 'Предмет удалён'} · {parseDate(deadline.due_date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' })}</small></span>
         <button type="button" className="delete-task" aria-label={`Удалить дедлайн: ${deadline.title}`} onClick={() => void deleteDeadline(deadline.id)}>×</button>
       </div>)}
       {deadlines.length === 0 && <p className="note">Пока нет дедлайнов. Можно выдохнуть 🌷</p>}
     </section>
-    <Calendar subjects={subjects} deadlines={deadlines} onSaved={loadStudy} />
-    <footer>Bloom at your own pace ✿</footer>
-  </main>;
+    </div>
+    <div id="calendar"><Calendar subjects={subjects} deadlines={deadlines} onSaved={loadStudy} /></div>
+    <footer><BloomMark /><span>Пусть твои планы расцветают.</span><small>StudyBloom · твой уютный ежедневник</small></footer>
+  </main></div>;
 }
 
 createRoot(document.getElementById('root')!).render(<App />);
