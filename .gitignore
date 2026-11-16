@@ -20,3 +20,6 @@ coverage/
 
 # Временная SQLite-база тестового lifespan
 studybloom-test.db
+
+test-results/
+playwright-report/

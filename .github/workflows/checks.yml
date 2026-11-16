@@ -42,3 +42,23 @@ jobs:
       - uses: actions/checkout@v4
       - name: Собрать контейнеры
         run: docker compose build
+
+  browser:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Проверить интерфейс на компьютере и телефоне
+        working-directory: frontend
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+          npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: planner-screenshots
+          path: frontend/test-results/
+          retention-days: 14
