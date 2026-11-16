@@ -17,3 +17,6 @@ coverage/
 .vscode/
 .idea/
 *.log
+
+# Временная SQLite-база тестового lifespan
+studybloom-test.db

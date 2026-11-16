@@ -82,3 +82,21 @@ def remove_deadline(deadline_id: int, db: Session = Depends(get_db)):
         raise HTTPException(404, "Дедлайн не найден")
     db.delete(deadline)
     db.commit()
+
+
+@router.put("/deadlines/{deadline_id}", response_model=DeadlineRead)
+def update_deadline(deadline_id: int, data: DeadlineCreate, db: Session = Depends(get_db)):
+    deadline = db.get(Deadline, deadline_id)
+    if deadline is None:
+        raise HTTPException(404, "Дедлайн не найден")
+    title = data.title.strip()
+    if not title:
+        raise HTTPException(422, "Название не может быть пустым")
+    if db.get(Subject, data.subject_id) is None:
+        raise HTTPException(404, "Предмет не найден")
+    deadline.title = title
+    deadline.due_date = data.due_date
+    deadline.subject_id = data.subject_id
+    db.commit()
+    db.refresh(deadline)
+    return deadline
