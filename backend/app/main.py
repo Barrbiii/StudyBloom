@@ -8,6 +8,8 @@ from sqlalchemy.orm import Session
 
 from .database import Base, engine, get_db
 from .models import Task
+from . import study_models  # noqa: F401 — регистрация таблиц
+from .study_routes import router as study_router
 
 
 @asynccontextmanager
@@ -17,6 +19,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="StudyBloom API", lifespan=lifespan)
+app.include_router(study_router)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173"],
