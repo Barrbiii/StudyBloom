@@ -53,6 +53,8 @@ def remove_subject(subject_id: int, db: Session = Depends(get_db)):
     subject = db.get(Subject, subject_id)
     if subject is None:
         raise HTTPException(404, "Предмет не найден")
+    if db.scalar(select(Deadline.id).where(Deadline.subject_id == subject_id).limit(1)) is not None:
+        raise HTTPException(409, "Сначала удалите или перенесите дедлайны этого предмета")
     db.delete(subject)
     db.commit()
 
