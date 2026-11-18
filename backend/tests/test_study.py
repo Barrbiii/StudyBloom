@@ -48,3 +48,16 @@ def test_edit_deadline_invalid_data_does_not_change_record(client):
         assert client.put(path, json=dict(payload, **change)).status_code == status
         assert client.get("/api/deadlines").json() == [deadline]
     assert client.put("/api/deadlines/999", json=payload).status_code == 404
+
+
+def test_subject_deletion_does_not_destroy_deadlines(client):
+    subject = client.post("/api/subjects", json={"name": "История"}).json()
+    deadline = client.post("/api/deadlines", json={
+        "title": "Доклад", "due_date": "2026-12-01", "subject_id": subject["id"]
+    }).json()
+    path = f"/api/subjects/{subject['id']}"
+    assert client.delete(path).status_code == 409
+    assert client.get("/api/deadlines").json() == [deadline]
+    assert client.get("/api/subjects").json() == [subject]
+    assert client.delete(f"/api/deadlines/{deadline['id']}").status_code == 204
+    assert client.delete(path).status_code == 204
