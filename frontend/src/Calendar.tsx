@@ -1,4 +1,5 @@
 import React from 'react';
+import { CalendarEvent, EventEditor } from './EventEditor';
 import { calendarDays, dateKey, moveAnchor, parseDate } from './calendarDates';
 
 type Subject = { id: number; name: string; color: string };
@@ -7,6 +8,15 @@ type Props = { subjects: Subject[]; deadlines: Deadline[]; onSaved: () => Promis
 const weekdays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 
 export function Calendar({ subjects, deadlines, onSaved }: Props) {
+  const [events, setEvents] = React.useState<CalendarEvent[]>([]);
+  const [eventEditor, setEventEditor] = React.useState<CalendarEvent | null | undefined>(undefined);
+  const [eventError, setEventError] = React.useState('');
+  async function loadEvents() {
+    const response = await fetch('/api/events');
+    if (!response.ok) throw Error('Не удалось загрузить события');
+    setEvents(await response.json()); setEventError('');
+  }
+  React.useEffect(() => { void loadEvents().catch(() => setEventError('Не удалось загрузить события.')); }, []);
   const [anchor, setAnchor] = React.useState(() => new Date());
   const [mode, setMode] = React.useState<'month' | 'week'>('month');
   const [filter, setFilter] = React.useState('');
@@ -37,6 +47,9 @@ export function Calendar({ subjects, deadlines, onSaved }: Props) {
   }
 
   return <section className="panel calendar" aria-label="Календарь дедлайнов">
+    {eventError && <p role="alert">{eventError} <button type="button" onClick={() => void loadEvents().catch(() => setEventError('Не удалось загрузить события.'))}>Повторить</button></p>}
+    <button type="button" onClick={() => setEventEditor(null)}>Добавить событие</button>
+    {eventEditor !== undefined && <EventEditor key={eventEditor?.id ?? "new"} event={eventEditor} onSaved={loadEvents} onClose={() => setEventEditor(undefined)} />}
     <div className="calendar-heading"><h2>Календарь 🌷</h2><div className="calendar-switch">
       <button type="button" aria-pressed={mode === 'month'} onClick={() => setMode('month')}>Месяц</button>
       <button type="button" aria-pressed={mode === 'week'} onClick={() => setMode('week')}>Неделя</button>
@@ -59,6 +72,9 @@ export function Calendar({ subjects, deadlines, onSaved }: Props) {
         const items = deadlines.filter(item => item.due_date === key && (!filter || String(item.subject_id) === filter));
         return <div key={key} className={`calendar-day ${mode === 'month' && day.getMonth() !== anchor.getMonth() ? 'outside' : ''} ${key === today ? 'today' : ''}`}>
           <time dateTime={key} aria-current={key === today ? 'date' : undefined}>{day.getDate()}</time>
+          {events.filter(event => dateKey(new Date(event.starts_at)) <= key && dateKey(new Date(new Date(event.ends_at).getTime() - 1)) >= key).map(event => <button type="button" className="calendar-deadline calendar-event" key={`event-${event.id}`} onClick={() => setEventEditor(event)}>
+            {event.title}<small>{new Date(event.starts_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })} · {event.location}</small>
+          </button>)}
           {items.map(item => <button key={item.id} type="button" className="calendar-deadline" onClick={() => { setEditing({ ...item }); setError(''); }} aria-label={`Изменить дедлайн: ${item.title}, ${key}`}>
             <span className="subject-dot" style={{ background: subjects.find(s => s.id === item.subject_id)?.color }} />
             {item.title}<small>{subjects.find(s => s.id === item.subject_id)?.name}</small>
@@ -66,7 +82,7 @@ export function Calendar({ subjects, deadlines, onSaved }: Props) {
         </div>;
       })}
     </div></div>
-    {!deadlines.some(item => days.some(day => dateKey(day) === item.due_date) && (!filter || String(item.subject_id) === filter)) && <p className="note">В этом периоде нет дедлайнов.</p>}
+    {!deadlines.some(item => days.some(day => dateKey(day) === item.due_date) && (!filter || String(item.subject_id) === filter)) && <p className="note">В этом периоде нет дедлайнов. События показаны отдельно.</p>}
     {editing && <div className="calendar-editor">
       <h3>Редактирование дедлайна</h3>
       <form onSubmit={save}>

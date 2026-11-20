@@ -43,3 +43,28 @@ test('ежедневник: формы, календарь и мобильная
   await page.screenshot({ path: testInfo.outputPath('mobile.png'), fullPage: true });
   expect(errors).toEqual([]);
 });
+
+test('событие создаётся и открывается из сетки календаря', async ({ page }) => {
+  const events: object[] = [];
+  await page.route('**/api/**', async route => {
+    if (new URL(route.request().url()).pathname === '/api/events') {
+      if (route.request().method() === 'POST') {
+        events.push({ id: 1, ...route.request().postDataJSON() });
+        await route.fulfill({ status: 201, json: events[0] }); return;
+      }
+      await route.fulfill({ json: events }); return;
+    }
+    await route.fulfill({ json: [] });
+  });
+  await page.goto('/');
+  await page.getByRole('button', { name: 'Добавить событие', exact: true }).click();
+  await page.getByLabel('Название события', { exact: true }).fill('Консультация');
+  const now = new Date();
+  const day = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')}`;
+  await page.getByLabel('Начало', { exact: true }).fill(`${day}T10:00`);
+  await page.getByLabel('Окончание', { exact: true }).fill(`${day}T11:00`);
+  await page.getByRole('button', { name: 'Сохранить событие' }).click();
+  await expect(page.getByRole('region', { name: 'Редактор события' })).toHaveCount(0);
+  await page.locator('.calendar-event').getByText('Консультация').click();
+  await expect(page.getByLabel('Название события', { exact: true })).toHaveValue('Консультация');
+});
