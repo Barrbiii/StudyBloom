@@ -11,6 +11,7 @@ from .models import Task
 from . import study_models  # noqa: F401 — регистрация таблиц
 from .study_routes import router as study_router
 from .event_routes import router as event_router
+from .auth import router as auth_router
 
 
 @asynccontextmanager
@@ -22,6 +23,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(title="StudyBloom API", lifespan=lifespan)
 app.include_router(study_router)
 app.include_router(event_router)
+app.include_router(auth_router)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173"],
