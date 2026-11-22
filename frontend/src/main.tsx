@@ -1,4 +1,5 @@
 import React from 'react';
+import { AuthGate } from './AuthGate';
 import { createRoot } from 'react-dom/client';
 import './style.css';
 import { Calendar } from './Calendar';
@@ -220,4 +221,4 @@ function App() {
   </main></div>;
 }
 
-createRoot(document.getElementById('root')!).render(<App />);
+createRoot(document.getElementById('root')!).render(<AuthGate><App /></AuthGate>);
