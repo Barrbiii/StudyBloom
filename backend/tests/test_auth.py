@@ -76,3 +76,18 @@ def test_session_expiry_and_hashed_storage(client, monkeypatch):
     finally:
         generator.close()
     assert client.get("/api/auth/me").status_code == 401
+
+
+def test_logout_all_revokes_other_sessions(client, monkeypatch):
+    monkeypatch.setenv('AUTH_COOKIE_SECURE', 'false')
+    client.post('/api/auth/register', json=CREDS)
+    client.post('/api/auth/login', json=CREDS)
+    first = client.cookies.get(COOKIE)
+    client.post('/api/auth/login', json=CREDS)
+    second = client.cookies.get(COOKIE)
+    assert first != second
+    assert client.post('/api/auth/logout-all').status_code == 204
+    for token in (first, second):
+        client.cookies.clear()
+        client.cookies.set(COOKIE, token)
+        assert client.get('/api/auth/me').status_code == 401

@@ -126,3 +126,11 @@ def logout(request: Request, response: Response, db: Session = Depends(get_db)):
         db.delete(session)
         db.commit()
     response.delete_cookie(COOKIE, path="/api", httponly=True, samesite="strict")
+
+
+@router.post("/logout-all", status_code=204, dependencies=[Depends(same_origin)])
+def logout_all(response: Response, user: User = Depends(current_user), db: Session = Depends(get_db)):
+    from sqlalchemy import delete
+    db.execute(delete(LoginSession).where(LoginSession.user_id == user.id))
+    db.commit()
+    response.delete_cookie(COOKIE, path="/api", httponly=True, samesite="strict")
