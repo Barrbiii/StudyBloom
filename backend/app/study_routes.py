@@ -6,6 +6,7 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .database import get_db
+from .auth import User, current_user
 from .study_models import Deadline, Subject
 
 router = APIRouter(prefix="/api", tags=["Учёба"])
@@ -33,13 +34,13 @@ class DeadlineRead(DeadlineCreate):
 
 
 @router.get("/subjects", response_model=list[SubjectRead])
-def list_subjects(db: Session = Depends(get_db)):
-    return db.scalars(select(Subject).order_by(Subject.name)).all()
+def list_subjects(db: Session = Depends(get_db), user: User = Depends(current_user)):
+    return db.scalars(select(Subject).where(Subject.owner_id == user.id).order_by(Subject.name)).all()
 
 
 @router.post("/subjects", response_model=SubjectRead, status_code=201)
-def add_subject(data: SubjectCreate, db: Session = Depends(get_db)):
-    subject = Subject(name=data.name.strip(), color=data.color)
+def add_subject(data: SubjectCreate, db: Session = Depends(get_db), user: User = Depends(current_user)):
+    subject = Subject(name=data.name.strip(), color=data.color, owner_id=user.id)
     if not subject.name:
         raise HTTPException(422, "Название не может быть пустым")
     db.add(subject)
@@ -49,9 +50,9 @@ def add_subject(data: SubjectCreate, db: Session = Depends(get_db)):
 
 
 @router.delete("/subjects/{subject_id}", status_code=204)
-def remove_subject(subject_id: int, db: Session = Depends(get_db)):
+def remove_subject(subject_id: int, db: Session = Depends(get_db), user: User = Depends(current_user)):
     subject = db.get(Subject, subject_id)
-    if subject is None:
+    if subject is None or subject.owner_id != user.id:
         raise HTTPException(404, "Предмет не найден")
     if db.scalar(select(Deadline.id).where(Deadline.subject_id == subject_id).limit(1)) is not None:
         raise HTTPException(409, "Сначала удалите или перенесите дедлайны этого предмета")
@@ -60,15 +61,16 @@ def remove_subject(subject_id: int, db: Session = Depends(get_db)):
 
 
 @router.get("/deadlines", response_model=list[DeadlineRead])
-def list_deadlines(db: Session = Depends(get_db)):
-    return db.scalars(select(Deadline).order_by(Deadline.due_date, Deadline.id)).all()
+def list_deadlines(db: Session = Depends(get_db), user: User = Depends(current_user)):
+    return db.scalars(select(Deadline).where(Deadline.owner_id == user.id).order_by(Deadline.due_date, Deadline.id)).all()
 
 
 @router.post("/deadlines", response_model=DeadlineRead, status_code=201)
-def add_deadline(data: DeadlineCreate, db: Session = Depends(get_db)):
-    if db.get(Subject, data.subject_id) is None:
+def add_deadline(data: DeadlineCreate, db: Session = Depends(get_db), user: User = Depends(current_user)):
+    subject = db.get(Subject, data.subject_id)
+    if subject is None or subject.owner_id != user.id:
         raise HTTPException(404, "Предмет не найден")
-    deadline = Deadline(title=data.title.strip(), due_date=data.due_date, subject_id=data.subject_id)
+    deadline = Deadline(owner_id=user.id, title=data.title.strip(), due_date=data.due_date, subject_id=data.subject_id)
     if not deadline.title:
         raise HTTPException(422, "Название не может быть пустым")
     db.add(deadline)
@@ -78,23 +80,24 @@ def add_deadline(data: DeadlineCreate, db: Session = Depends(get_db)):
 
 
 @router.delete("/deadlines/{deadline_id}", status_code=204)
-def remove_deadline(deadline_id: int, db: Session = Depends(get_db)):
+def remove_deadline(deadline_id: int, db: Session = Depends(get_db), user: User = Depends(current_user)):
     deadline = db.get(Deadline, deadline_id)
-    if deadline is None:
+    if deadline is None or deadline.owner_id != user.id:
         raise HTTPException(404, "Дедлайн не найден")
     db.delete(deadline)
     db.commit()
 
 
 @router.put("/deadlines/{deadline_id}", response_model=DeadlineRead)
-def update_deadline(deadline_id: int, data: DeadlineCreate, db: Session = Depends(get_db)):
+def update_deadline(deadline_id: int, data: DeadlineCreate, db: Session = Depends(get_db), user: User = Depends(current_user)):
     deadline = db.get(Deadline, deadline_id)
-    if deadline is None:
+    if deadline is None or deadline.owner_id != user.id:
         raise HTTPException(404, "Дедлайн не найден")
     title = data.title.strip()
     if not title:
         raise HTTPException(422, "Название не может быть пустым")
-    if db.get(Subject, data.subject_id) is None:
+    subject = db.get(Subject, data.subject_id)
+    if subject is None or subject.owner_id != user.id:
         raise HTTPException(404, "Предмет не найден")
     deadline.title = title
     deadline.due_date = data.due_date

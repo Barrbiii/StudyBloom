@@ -68,6 +68,8 @@ def same_origin(request: Request):
 
 
 def current_user(request: Request, db: Session = Depends(get_db)) -> User:
+    if request.method not in {"GET", "HEAD", "OPTIONS"}:
+        same_origin(request)
     token = request.cookies.get(COOKIE, "")
     session = db.get(LoginSession, hashlib.sha256(token.encode()).hexdigest()) if token else None
     if session is None:
