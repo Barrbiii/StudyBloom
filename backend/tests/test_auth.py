@@ -1,7 +1,12 @@
 import hashlib
 from datetime import datetime, timedelta, timezone
 
-from .test_tasks import client
+from .test_tasks import raw_client
+import pytest
+
+@pytest.fixture
+def client(raw_client):
+    return raw_client
 from app.auth import COOKIE, LoginSession, password_hash, password_matches
 from app.main import app
 from app.database import get_db

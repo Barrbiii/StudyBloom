@@ -13,7 +13,7 @@ from app.main import app
 
 
 @pytest.fixture
-def client():
+def raw_client():
     engine = create_engine(
         "sqlite://",
         connect_args={"check_same_thread": False},
@@ -33,6 +33,15 @@ def client():
         app.dependency_overrides.clear()
         Base.metadata.drop_all(bind=engine)
         engine.dispose()
+
+
+@pytest.fixture
+def client(raw_client, monkeypatch):
+    monkeypatch.setenv("AUTH_COOKIE_SECURE", "false")
+    credentials = {"username": "tester", "password": "test-password-long"}
+    assert raw_client.post("/api/auth/register", json=credentials).status_code == 201
+    assert raw_client.post("/api/auth/login", json=credentials).status_code == 200
+    yield raw_client
 
 
 def test_health(client):
