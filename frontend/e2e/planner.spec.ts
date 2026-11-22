@@ -15,6 +15,7 @@ test('ежедневник: формы, календарь и мобильная
     { id: 3, name: 'История', color: '#ba9b7d' },
   ];
   await page.route('**/api/**', async route => {
+    if (new URL(route.request().url()).pathname === '/api/auth/me') { await route.fulfill({ json: { id: 1, username: 'tester' } }); return; }
     const path = new URL(route.request().url()).pathname;
     if (route.request().method() === 'POST' && path === '/api/tasks') {
       tasks.push({ id: 4, ...route.request().postDataJSON(), completed: false });
@@ -47,6 +48,7 @@ test('ежедневник: формы, календарь и мобильная
 test('событие создаётся и открывается из сетки календаря', async ({ page }) => {
   const events: object[] = [];
   await page.route('**/api/**', async route => {
+    if (new URL(route.request().url()).pathname === '/api/auth/me') { await route.fulfill({ json: { id: 1, username: 'tester' } }); return; }
     if (new URL(route.request().url()).pathname === '/api/events') {
       if (route.request().method() === 'POST') {
         events.push({ id: 1, ...route.request().postDataJSON() });
@@ -67,4 +69,28 @@ test('событие создаётся и открывается из сетк�
   await expect(page.getByRole('region', { name: 'Редактор события' })).toHaveCount(0);
   await page.locator('.calendar-event').getByText('Консультация').click();
   await expect(page.getByLabel('Название события', { exact: true })).toHaveValue('Консультация');
+});
+
+
+test('вход закрывает учебные данные до авторизации и выход очищает экран', async ({ page }) => {
+  let loggedIn = false;
+  let protectedRequests = 0;
+  await page.route('**/api/**', async route => {
+    const path = new URL(route.request().url()).pathname;
+    if (path === '/api/auth/me') { await route.fulfill({ status: loggedIn ? 200 : 401, json: loggedIn ? { id: 1, username: 'tester' } : {} }); return; }
+    if (path === '/api/auth/login') { loggedIn = true; await route.fulfill({ json: { id: 1, username: 'tester' } }); return; }
+    if (path === '/api/auth/logout') { loggedIn = false; await route.fulfill({ status: 204 }); return; }
+    protectedRequests++;
+    await route.fulfill({ json: path === '/api/tasks' ? [{ id: 1, title: 'Личные данные', completed: false }] : [] });
+  });
+  await page.goto('/');
+  await expect(page.getByRole('button', { name: 'Войти', exact: true })).toBeVisible();
+  expect(protectedRequests).toBe(0);
+  await page.getByLabel('Логин', { exact: true }).fill('tester');
+  await page.getByLabel('Пароль', { exact: true }).fill('long-password-for-test');
+  await page.getByRole('button', { name: 'Войти', exact: true }).click();
+  await expect(page.getByText('Личные данные', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Выйти', exact: true }).click();
+  await expect(page.getByText('Личные данные', { exact: true })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: 'Войти', exact: true })).toBeVisible();
 });
