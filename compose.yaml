@@ -14,6 +14,7 @@ services:
   backend:
     build: ./backend
     environment:
+      AUTH_COOKIE_SECURE: ${AUTH_COOKIE_SECURE:-false}
       DATABASE_URL: postgresql+psycopg://studybloom:${POSTGRES_PASSWORD:-localdevpassword}@db:5432/studybloom
     depends_on:
       db:
