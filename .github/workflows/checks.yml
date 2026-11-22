@@ -62,3 +62,27 @@ jobs:
           name: planner-screenshots
           path: frontend/test-results/
           retention-days: 14
+
+  postgres-migration:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: testuser
+          POSTGRES_PASSWORD: testpassword
+          POSTGRES_DB: studybloom_test
+        ports: ["5432:5432"]
+        options: --health-cmd pg_isready --health-interval 5s --health-retries 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install -r backend/requirements-dev.txt
+      - name: Проверить сохранение прежних строк PostgreSQL
+        working-directory: backend
+        env:
+          DATABASE_URL: sqlite:///./studybloom-test.db
+          POSTGRES_TEST_URL: postgresql+psycopg://testuser:testpassword@localhost:5432/studybloom_test
+        run: python -m pytest tests/test_postgres_migration.py -q
