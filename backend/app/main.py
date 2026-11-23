@@ -1,10 +1,10 @@
 from contextlib import asynccontextmanager
 from typing import Literal
 
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-from sqlalchemy import select, case
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from .database import Base, engine, get_db
@@ -64,8 +64,18 @@ def health():
 
 
 @app.get("/api/tasks", response_model=list[TaskResponse])
-def list_tasks(db: Session = Depends(get_db), user: User = Depends(current_user)):
-    return db.scalars(select(Task).where(Task.owner_id == user.id).order_by(Task.id.desc())).all()
+def list_tasks(db: Session = Depends(get_db), user: User = Depends(current_user),
+               q: str = Query(default="", max_length=255), completed: bool | None = None,
+               priority: Literal["low", "normal", "high"] | None = None):
+    query = select(Task).where(Task.owner_id == user.id)
+    if q.strip():
+        escaped = q.strip().replace("!", "!!").replace("%", "!%").replace("_", "!_")
+        query = query.where(Task.title.ilike(f"%{escaped}%", escape="!"))
+    if completed is not None:
+        query = query.where(Task.completed == completed)
+    if priority is not None:
+        query = query.where(Task.priority == priority)
+    return db.scalars(query.order_by(Task.id.desc())).all()
 
 
 @app.post("/api/tasks", response_model=TaskResponse, status_code=201)
