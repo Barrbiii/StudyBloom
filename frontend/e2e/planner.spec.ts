@@ -94,3 +94,16 @@ test('вход закрывает учебные данные до автори�
   await expect(page.getByText('Личные данные', { exact: true })).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Войти', exact: true })).toBeVisible();
 });
+
+test('истёкшая сессия убирает личный интерфейс после ответа 401', async ({ page }) => {
+  await page.route('**/api/**', async route => {
+    const path = new URL(route.request().url()).pathname;
+    if (path === '/api/auth/me') { await route.fulfill({ json: { id: 1, username: 'tester' } }); return; }
+    if (path === '/api/tasks') { await route.fulfill({ status: 401, json: { detail: 'Сессия истекла' } }); return; }
+    await route.fulfill({ json: [] });
+  });
+  await page.goto('/');
+  await expect(page.getByRole('button', { name: 'Войти', exact: true })).toBeVisible();
+  await expect(page.getByRole('navigation')).toHaveCount(0);
+  await expect(page.getByText('Сессия завершилась. Войди снова.', { exact: false })).toBeVisible();
+});
