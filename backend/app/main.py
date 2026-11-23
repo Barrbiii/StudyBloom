@@ -11,17 +11,21 @@ from .models import Task
 from . import study_models  # noqa: F401 — регистрация таблиц
 from .study_routes import router as study_router
 from .event_routes import router as event_router
+from .auth import router as auth_router, User, current_user
+from .migrations import migrate_owners
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
+    migrate_owners(engine)
     yield
 
 
 app = FastAPI(title="StudyBloom API", lifespan=lifespan)
 app.include_router(study_router)
 app.include_router(event_router)
+app.include_router(auth_router)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173"],
@@ -53,13 +57,13 @@ def health():
 
 
 @app.get("/api/tasks", response_model=list[TaskResponse])
-def list_tasks(db: Session = Depends(get_db)):
-    return db.scalars(select(Task).order_by(Task.id.desc())).all()
+def list_tasks(db: Session = Depends(get_db), user: User = Depends(current_user)):
+    return db.scalars(select(Task).where(Task.owner_id == user.id).order_by(Task.id.desc())).all()
 
 
 @app.post("/api/tasks", response_model=TaskResponse, status_code=201)
-def create_task(payload: TaskCreate, db: Session = Depends(get_db)):
-    task = Task(title=payload.title.strip())
+def create_task(payload: TaskCreate, db: Session = Depends(get_db), user: User = Depends(current_user)):
+    task = Task(title=payload.title.strip(), owner_id=user.id)
     if not task.title:
         raise HTTPException(status_code=422, detail="Название не может быть пустым")
     db.add(task)
@@ -69,9 +73,9 @@ def create_task(payload: TaskCreate, db: Session = Depends(get_db)):
 
 
 @app.patch("/api/tasks/{task_id}", response_model=TaskResponse)
-def update_task(task_id: int, payload: TaskUpdate, db: Session = Depends(get_db)):
+def update_task(task_id: int, payload: TaskUpdate, db: Session = Depends(get_db), user: User = Depends(current_user)):
     task = db.get(Task, task_id)
-    if task is None:
+    if task is None or task.owner_id != user.id:
         raise HTTPException(status_code=404, detail="Задача не найдена")
     if payload.title is not None:
         task.title = payload.title.strip()
@@ -85,9 +89,9 @@ def update_task(task_id: int, payload: TaskUpdate, db: Session = Depends(get_db)
 
 
 @app.delete("/api/tasks/{task_id}", status_code=204)
-def delete_task(task_id: int, db: Session = Depends(get_db)):
+def delete_task(task_id: int, db: Session = Depends(get_db), user: User = Depends(current_user)):
     task = db.get(Task, task_id)
-    if task is None:
+    if task is None or task.owner_id != user.id:
         raise HTTPException(status_code=404, detail="Задача не найдена")
     db.delete(task)
     db.commit()

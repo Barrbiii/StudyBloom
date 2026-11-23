@@ -1,4 +1,6 @@
+import { apiFetch } from './api';
 import React from 'react';
+import { AuthGate } from './AuthGate';
 import { createRoot } from 'react-dom/client';
 import './style.css';
 import { Calendar } from './Calendar';
@@ -24,7 +26,7 @@ function App() {
 
   async function loadTasks() {
     try {
-      const response = await fetch(API);
+      const response = await apiFetch(API);
       if (!response.ok) throw new Error('Не удалось загрузить задачи');
       setTasks(await response.json());
       setError('');
@@ -38,7 +40,7 @@ function App() {
   async function loadStudy() {
     try {
       const [subjectsResponse, deadlinesResponse] = await Promise.all([
-        fetch('/api/subjects'), fetch('/api/deadlines'),
+        apiFetch('/api/subjects'), apiFetch('/api/deadlines'),
       ]);
       if (!subjectsResponse.ok || !deadlinesResponse.ok) throw new Error();
       const nextSubjects: Subject[] = await subjectsResponse.json();
@@ -56,7 +58,7 @@ function App() {
     event.preventDefault();
     if (!subjectDraft.trim()) return;
     try {
-      const response = await fetch('/api/subjects', {
+      const response = await apiFetch('/api/subjects', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: subjectDraft.trim() }),
       });
@@ -70,7 +72,7 @@ function App() {
     event.preventDefault();
     if (!deadlineDraft.trim() || !deadlineDate || !selectedSubject) return;
     try {
-      const response = await fetch('/api/deadlines', {
+      const response = await apiFetch('/api/deadlines', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           title: deadlineDraft.trim(), due_date: deadlineDate,
@@ -86,7 +88,7 @@ function App() {
 
   async function deleteDeadline(id: number) {
     try {
-      const response = await fetch(`/api/deadlines/${id}`, { method: 'DELETE' });
+      const response = await apiFetch(`/api/deadlines/${id}`, { method: 'DELETE' });
       if (!response.ok) throw new Error();
       await loadStudy();
     } catch { setError('Не удалось удалить дедлайн.'); }
@@ -97,7 +99,7 @@ function App() {
     const title = draft.trim();
     if (!title) return;
     try {
-      const response = await fetch(API, {
+      const response = await apiFetch(API, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title }),
@@ -112,7 +114,7 @@ function App() {
 
   async function toggleTask(task: Task) {
     try {
-      const response = await fetch(`${API}/${task.id}`, {
+      const response = await apiFetch(`${API}/${task.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ completed: !task.completed }),
@@ -126,7 +128,7 @@ function App() {
 
   async function removeTask(task: Task) {
     try {
-      const response = await fetch(`${API}/${task.id}`, { method: 'DELETE' });
+      const response = await apiFetch(`${API}/${task.id}`, { method: 'DELETE' });
       if (!response.ok) throw new Error();
       await loadTasks();
     } catch {
@@ -220,4 +222,4 @@ function App() {
   </main></div>;
 }
 
-createRoot(document.getElementById('root')!).render(<App />);
+createRoot(document.getElementById('root')!).render(<AuthGate><App /></AuthGate>);

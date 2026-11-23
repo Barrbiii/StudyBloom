@@ -14,12 +14,13 @@ services:
   backend:
     build: ./backend
     environment:
+      AUTH_COOKIE_SECURE: ${AUTH_COOKIE_SECURE:-false}
       DATABASE_URL: postgresql+psycopg://studybloom:${POSTGRES_PASSWORD:-localdevpassword}@db:5432/studybloom
     depends_on:
       db:
         condition: service_healthy
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
   frontend:
     build: ./frontend
     depends_on:

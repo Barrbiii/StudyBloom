@@ -1,3 +1,4 @@
+import { apiFetch } from './api';
 import React from 'react';
 import { CalendarEvent, EventEditor } from './EventEditor';
 import { calendarDays, dateKey, moveAnchor, parseDate } from './calendarDates';
@@ -12,7 +13,7 @@ export function Calendar({ subjects, deadlines, onSaved }: Props) {
   const [eventEditor, setEventEditor] = React.useState<CalendarEvent | null | undefined>(undefined);
   const [eventError, setEventError] = React.useState('');
   async function loadEvents() {
-    const response = await fetch('/api/events');
+    const response = await apiFetch('/api/events');
     if (!response.ok) throw Error('Не удалось загрузить события');
     setEvents(await response.json()); setEventError('');
   }
@@ -34,7 +35,7 @@ export function Calendar({ subjects, deadlines, onSaved }: Props) {
     if (!editing || saving) return;
     setSaving(true); setError('');
     try {
-      const response = await fetch(`/api/deadlines/${editing.id}`, {
+      const response = await apiFetch(`/api/deadlines/${editing.id}`, {
         method: 'PUT', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ title: editing.title.trim(), due_date: editing.due_date, subject_id: editing.subject_id }),
       });

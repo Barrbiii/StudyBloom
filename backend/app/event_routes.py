@@ -2,10 +2,11 @@ from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import AwareDatetime, BaseModel, Field, field_validator, model_validator
-from sqlalchemy import DateTime, Integer, String, select
+from sqlalchemy import DateTime, ForeignKey, Integer, String, select
 from sqlalchemy.orm import Mapped, Session, mapped_column
 
 from .database import Base, get_db
+from .auth import User, current_user
 
 router = APIRouter(prefix="/api/events", tags=["События"])
 
@@ -13,6 +14,7 @@ router = APIRouter(prefix="/api/events", tags=["События"])
 class CalendarEvent(Base):
     __tablename__ = "calendar_events"
 
+    owner_id: Mapped[int | None] = mapped_column(ForeignKey("users.id"), nullable=True, index=True)
     id: Mapped[int] = mapped_column(Integer, primary_key=True)
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     starts_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
@@ -56,9 +58,9 @@ class EventRead(BaseModel):
         return value.replace(tzinfo=timezone.utc) if value.tzinfo is None else value.astimezone(timezone.utc)
 
 
-def find_event(db: Session, event_id: int):
+def find_event(db: Session, event_id: int, user: User):
     event = db.get(CalendarEvent, event_id)
-    if event is None:
+    if event is None or event.owner_id != user.id:
         raise HTTPException(404, "Событие не найдено")
     return event
 
@@ -71,13 +73,13 @@ def apply_data(event: CalendarEvent, data: EventWrite):
 
 
 @router.get("", response_model=list[EventRead])
-def list_events(db: Session = Depends(get_db)):
-    return db.scalars(select(CalendarEvent).order_by(CalendarEvent.starts_at, CalendarEvent.id)).all()
+def list_events(db: Session = Depends(get_db), user: User = Depends(current_user)):
+    return db.scalars(select(CalendarEvent).where(CalendarEvent.owner_id == user.id).order_by(CalendarEvent.starts_at, CalendarEvent.id)).all()
 
 
 @router.post("", response_model=EventRead, status_code=201)
-def create_event(data: EventWrite, db: Session = Depends(get_db)):
-    event = CalendarEvent()
+def create_event(data: EventWrite, db: Session = Depends(get_db), user: User = Depends(current_user)):
+    event = CalendarEvent(owner_id=user.id)
     apply_data(event, data)
     db.add(event)
     db.commit()
@@ -86,13 +88,13 @@ def create_event(data: EventWrite, db: Session = Depends(get_db)):
 
 
 @router.get("/{event_id}", response_model=EventRead)
-def read_event(event_id: int, db: Session = Depends(get_db)):
-    return find_event(db, event_id)
+def read_event(event_id: int, db: Session = Depends(get_db), user: User = Depends(current_user)):
+    return find_event(db, event_id, user)
 
 
 @router.put("/{event_id}", response_model=EventRead)
-def update_event(event_id: int, data: EventWrite, db: Session = Depends(get_db)):
-    event = find_event(db, event_id)
+def update_event(event_id: int, data: EventWrite, db: Session = Depends(get_db), user: User = Depends(current_user)):
+    event = find_event(db, event_id, user)
     apply_data(event, data)
     db.commit()
     db.refresh(event)
@@ -100,6 +102,6 @@ def update_event(event_id: int, data: EventWrite, db: Session = Depends(get_db))
 
 
 @router.delete("/{event_id}", status_code=204)
-def delete_event(event_id: int, db: Session = Depends(get_db)):
-    db.delete(find_event(db, event_id))
+def delete_event(event_id: int, db: Session = Depends(get_db), user: User = Depends(current_user)):
+    db.delete(find_event(db, event_id, user))
     db.commit()
