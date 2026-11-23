@@ -82,3 +82,13 @@ def test_missing_task(client):
 def test_empty_title(client):
     assert client.post("/api/tasks", json={"title": ""}).status_code == 422
     assert client.post("/api/tasks", json={"title": "   "}).status_code == 422
+
+
+def test_task_priority_lifecycle(client):
+    normal = client.post('/api/tasks', json={'title': 'Обычная'}).json()
+    assert normal['priority'] == 'normal'
+    high = client.post('/api/tasks', json={'title': 'Важная', 'priority': 'high'}).json()
+    assert high['priority'] == 'high'
+    assert client.patch(f'/api/tasks/{high["id"]}', json={'priority': 'low'}).json()['priority'] == 'low'
+    assert client.post('/api/tasks', json={'title': 'Неверная', 'priority': 'urgent'}).status_code == 422
+    assert client.patch(f'/api/tasks/{normal["id"]}', json={'priority': 'urgent'}).status_code == 422
