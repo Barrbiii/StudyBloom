@@ -20,7 +20,12 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
     } catch { setError('Не удалось проверить сессию. Проверь соединение и повтори.'); }
     finally { setChecking(false); }
   }
-  React.useEffect(() => { void check(); }, []);
+  React.useEffect(() => {
+    const expired = () => { setUser(null); setPassword(''); setError('Сессия завершилась. Войди снова.'); };
+    window.addEventListener('studybloom:session-expired', expired);
+    void check();
+    return () => window.removeEventListener('studybloom:session-expired', expired);
+  }, []);
   async function submit(event: React.FormEvent) {
     event.preventDefault(); if (busy) return;
     setBusy(true); setError('');
@@ -32,7 +37,7 @@ export function AuthGate({ children }: { children: React.ReactNode }) {
         if (!response.ok) { setError(response.status === 409 ? 'Этот логин уже занят.' : 'Не удалось зарегистрироваться. Проверь логин и пароль.'); return; }
       }
       const response = await send('login');
-      if (!response.ok) { setError('Не удалось войти. Проверь логин и пароль.'); return; }
+      if (!response.ok) { setError(response.status === 429 ? 'Слишком много попыток. Подожди минуту и повтори.' : 'Не удалось войти. Проверь логин и пароль.'); return; }
       const profile = await response.json();
       setPassword(''); setUser(profile);
     } catch { setError('Сервер недоступен. Попробуй снова.'); }

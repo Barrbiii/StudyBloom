@@ -1,3 +1,4 @@
+import { apiFetch } from './api';
 import React from 'react';
 export type CalendarEvent = { id: number; title: string; starts_at: string; ends_at: string; location: string };
 const localTime = (value: string) => {
@@ -19,7 +20,7 @@ export function EventEditor({ event, onSaved, onClose }: { event: CalendarEvent 
   async function mutate(method: string) {
     setBusy(true); setError('');
     try {
-      const response = await fetch(`/api/events${event ? `/${event.id}` : ''}`, {
+      const response = await apiFetch(`/api/events${event ? `/${event.id}` : ''}`, {
         method, headers: { 'Content-Type': 'application/json' },
         ...(method === 'DELETE' ? {} : { body: JSON.stringify({ title: title.trim(), starts_at: new Date(start).toISOString(), ends_at: new Date(end).toISOString(), location }) }),
       });
