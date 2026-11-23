@@ -82,3 +82,24 @@ def test_missing_task(client):
 def test_empty_title(client):
     assert client.post("/api/tasks", json={"title": ""}).status_code == 422
     assert client.post("/api/tasks", json={"title": "   "}).status_code == 422
+
+
+def test_task_priority_lifecycle(client):
+    normal = client.post('/api/tasks', json={'title': 'Обычная'}).json()
+    assert normal['priority'] == 'normal'
+    high = client.post('/api/tasks', json={'title': 'Важная', 'priority': 'high'}).json()
+    assert high['priority'] == 'high'
+    assert client.patch(f'/api/tasks/{high["id"]}', json={'priority': 'low'}).json()['priority'] == 'low'
+    assert client.post('/api/tasks', json={'title': 'Неверная', 'priority': 'urgent'}).status_code == 422
+    assert client.patch(f'/api/tasks/{normal["id"]}', json={'priority': 'urgent'}).status_code == 422
+
+
+def test_task_search_and_combined_filters(client):
+    a = client.post('/api/tasks', json={'title': '100% математика', 'priority': 'high'}).json()
+    b = client.post('/api/tasks', json={'title': '100 задач'}).json()
+    client.patch(f'/api/tasks/{a["id"]}', json={'completed': True})
+    assert [t['id'] for t in client.get('/api/tasks?q=%25').json()] == [a['id']]
+    assert [t['id'] for t in client.get('/api/tasks?completed=false').json()] == [b['id']]
+    assert client.get('/api/tasks?priority=high&completed=false').json() == []
+    assert client.get('/api/tasks?q=none').json() == []
+    assert client.get('/api/tasks?priority=urgent').status_code == 422

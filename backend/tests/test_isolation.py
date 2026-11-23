@@ -42,3 +42,16 @@ def test_owner_migration_preserves_legacy_rows_and_is_repeatable():
     with engine.connect() as db:
         assert db.execute(text('SELECT id, title, owner_id FROM tasks')).one() == (1, 'Старые данные', None)
     engine.dispose()
+
+
+def test_priority_migration_preserves_old_tasks():
+    from app.migrations import migrate_task_priority
+    engine = create_engine('sqlite://')
+    with engine.begin() as db:
+        db.execute(text('CREATE TABLE tasks (id INTEGER PRIMARY KEY, title TEXT)'))
+        db.execute(text("INSERT INTO tasks VALUES (1, 'Старая задача')"))
+    migrate_task_priority(engine)
+    migrate_task_priority(engine)
+    with engine.connect() as db:
+        assert db.execute(text('SELECT title, priority FROM tasks')).one() == ('Старая задача', 'normal')
+    engine.dispose()

@@ -3,7 +3,7 @@ import os
 import uuid
 import pytest
 from sqlalchemy import create_engine, text
-from app.migrations import migrate_owners
+from app.migrations import migrate_owners, migrate_task_priority
 
 
 @pytest.mark.skipif(not os.getenv('POSTGRES_TEST_URL'), reason='Требуется тестовый PostgreSQL')
@@ -22,7 +22,10 @@ def test_postgres_legacy_migration():
                 conn.execute(text(f"INSERT INTO {table} VALUES (1, 'Старые данные')"))
         migrate_owners(engine)
         migrate_owners(engine)
+        migrate_task_priority(engine)
+        migrate_task_priority(engine)
         with engine.connect() as conn:
+            assert conn.execute(text('SELECT priority FROM tasks')).scalar_one() == 'normal'
             for table in ('tasks', 'subjects', 'deadlines', 'calendar_events'):
                 assert conn.execute(text(f'SELECT id, title, owner_id FROM {table}')).one() == (1, 'Старые данные', None)
     finally:
