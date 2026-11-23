@@ -150,6 +150,13 @@ function App() {
     } catch { setError('Не удалось изменить приоритет.'); }
   }
   const visibleTasks = filterTasks(tasks, search, statusFilter, priorityFilter);
+  function exportTasks() {
+    const blob = new Blob([JSON.stringify(visibleTasks.map(({ id, title, completed, priority }) => ({ id, title, completed, priority: priority || 'normal' })), null, 2)], { type: 'application/json;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a'); link.href = url; link.download = `studybloom-tasks-${dateKey(new Date())}.json`;
+    document.body.appendChild(link); link.click(); link.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }
   const completed = tasks.filter(task => task.completed).length;
   const progress = tasks.length ? Math.round(completed / tasks.length * 100) : 0;
   const today = dateKey(new Date());
@@ -193,6 +200,7 @@ function App() {
         <button type="button" onClick={() => { setSearch(''); setStatusFilter('all'); setPriorityFilter(''); }}>Сбросить фильтры</button>
       </div>
       <p className="note">Показано {visibleTasks.length} из {tasks.length}</p>
+      <button type="button" disabled={!visibleTasks.length} onClick={exportTasks}>Экспорт показанных задач</button>
       <form onSubmit={addTask}>
         <input aria-label="Название задачи" placeholder="Добавить задачу..." value={draft} onChange={e => setDraft(e.target.value)} />
         <select aria-label="Приоритет новой задачи" value={newPriority} onChange={e => setNewPriority(e.target.value)}><option value="high">Высокий</option><option value="normal">Обычный</option><option value="low">Низкий</option></select>
