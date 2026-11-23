@@ -1,5 +1,6 @@
 import { apiFetch } from './api';
 import React from 'react';
+import { filterTasks, TaskFilter } from './taskFilters';
 import { Timetable } from './Timetable';
 import { AuthGate } from './AuthGate';
 import { createRoot } from 'react-dom/client';
@@ -8,13 +9,17 @@ import { Calendar } from './Calendar';
 import { BloomMark, FlowerSprig } from './Decorations';
 import { dateKey, parseDate } from './calendarDates';
 
-type Task = { id: number; title: string; completed: boolean };
+type Task = { id: number; title: string; completed: boolean; priority?: string };
 type Subject = { id: number; name: string; color: string };
 type Deadline = { id: number; title: string; due_date: string; subject_id: number };
 const API = '/api/tasks';
 
 function App() {
   const [tasks, setTasks] = React.useState<Task[]>([]);
+  const [search, setSearch] = React.useState('');
+  const [statusFilter, setStatusFilter] = React.useState<TaskFilter>('all');
+  const [priorityFilter, setPriorityFilter] = React.useState('');
+  const [newPriority, setNewPriority] = React.useState('normal');
   const [draft, setDraft] = React.useState('');
   const [subjects, setSubjects] = React.useState<Subject[]>([]);
   const [deadlines, setDeadlines] = React.useState<Deadline[]>([]);
@@ -103,7 +108,7 @@ function App() {
       const response = await apiFetch(API, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ title }),
+        body: JSON.stringify({ title, priority: newPriority }),
       });
       if (!response.ok) throw new Error();
       setDraft('');
@@ -137,6 +142,14 @@ function App() {
     }
   }
 
+  async function changePriority(task: Task, priority: string) {
+    try {
+      const response = await apiFetch(`${API}/${task.id}`, { method: 'PATCH', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ priority }) });
+      if (!response.ok) throw Error();
+      await loadTasks();
+    } catch { setError('Не удалось изменить приоритет.'); }
+  }
+  const visibleTasks = filterTasks(tasks, search, statusFilter, priorityFilter);
   const completed = tasks.filter(task => task.completed).length;
   const progress = tasks.length ? Math.round(completed / tasks.length * 100) : 0;
   const today = dateKey(new Date());
@@ -173,17 +186,27 @@ function App() {
       <div className="planner-grid">
     <section className="panel tasks-panel" id="tasks">
       <div className="panel-heading"><div><p className="card-kicker">ШАГ ЗА ШАГОМ</p><h2>Мои задачи</h2></div><span className="count-badge">{tasks.length}</span></div>
+      <div className="task-filters">
+        <input type="search" aria-label="Поиск задач" placeholder="Найти задачу…" value={search} onChange={e => setSearch(e.target.value)} />
+        <select aria-label="Статус задач" value={statusFilter} onChange={e => setStatusFilter(e.target.value as TaskFilter)}><option value="all">Все задачи</option><option value="active">Активные</option><option value="completed">Выполненные</option></select>
+        <select aria-label="Фильтр приоритета" value={priorityFilter} onChange={e => setPriorityFilter(e.target.value)}><option value="">Любой приоритет</option><option value="high">Высокий</option><option value="normal">Обычный</option><option value="low">Низкий</option></select>
+        <button type="button" onClick={() => { setSearch(''); setStatusFilter('all'); setPriorityFilter(''); }}>Сбросить фильтры</button>
+      </div>
+      <p className="note">Показано {visibleTasks.length} из {tasks.length}</p>
       <form onSubmit={addTask}>
         <input aria-label="Название задачи" placeholder="Добавить задачу..." value={draft} onChange={e => setDraft(e.target.value)} />
+        <select aria-label="Приоритет новой задачи" value={newPriority} onChange={e => setNewPriority(e.target.value)}><option value="high">Высокий</option><option value="normal">Обычный</option><option value="low">Низкий</option></select>
         <button type="submit">Добавить +</button>
       </form>
       {loading && <p className="note">Загружаем задачи...</p>}
       {!loading && tasks.length === 0 && <p className="note">Пока нет задач. Добавь первую 🌸</p>}
-      {tasks.map(task => <div key={task.id} className={task.completed ? 'task done' : 'task'}>
+      {!loading && tasks.length > 0 && visibleTasks.length === 0 && <p className="note">Нет задач по выбранным условиям.</p>}
+      {visibleTasks.map(task => <div key={task.id} className={task.completed ? 'task done' : 'task'}>
         <label>
           <input type="checkbox" checked={task.completed} onChange={() => void toggleTask(task)} />
           <span>{task.title}</span>
         </label>
+        <select aria-label={`Приоритет: ${task.title}`} value={task.priority || 'normal'} onChange={e => void changePriority(task, e.target.value)}><option value="high">Высокий</option><option value="normal">Обычный</option><option value="low">Низкий</option></select>
         <button type="button" className="delete-task" aria-label={`Удалить: ${task.title}`} onClick={() => void removeTask(task)}>×</button>
       </div>)}
       <p className="panel-footnote">Не обязательно успеть всё. Начни с самого важного.</p>
