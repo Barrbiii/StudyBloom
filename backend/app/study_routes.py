@@ -7,6 +7,7 @@ from sqlalchemy.orm import Session
 
 from .database import get_db
 from .auth import User, current_user
+from .timetable_routes import Lesson
 from .study_models import Deadline, Subject
 
 router = APIRouter(prefix="/api", tags=["Учёба"])
@@ -56,6 +57,8 @@ def remove_subject(subject_id: int, db: Session = Depends(get_db), user: User = 
         raise HTTPException(404, "Предмет не найден")
     if db.scalar(select(Deadline.id).where(Deadline.subject_id == subject_id).limit(1)) is not None:
         raise HTTPException(409, "Сначала удалите или перенесите дедлайны этого предмета")
+    if db.scalar(select(Lesson.id).where(Lesson.subject_id == subject_id).limit(1)) is not None:
+        raise HTTPException(409, "Сначала удалите занятия этого предмета")
     db.delete(subject)
     db.commit()
 
