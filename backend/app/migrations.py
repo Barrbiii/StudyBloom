@@ -15,3 +15,11 @@ def migrate_owners(engine):
             if "owner_id" not in {c["name"] for c in inspector.get_columns(table)}:
                 connection.execute(text(f"ALTER TABLE {table} ADD COLUMN owner_id INTEGER REFERENCES users(id)"))
             connection.execute(text(f"CREATE INDEX IF NOT EXISTS ix_{table}_owner_id ON {table} (owner_id)"))
+
+
+def migrate_task_priority(engine):
+    with engine.begin() as connection:
+        if connection.dialect.name == "postgresql":
+            connection.execute(text("SELECT pg_advisory_xact_lock(7349201)"))
+        if "priority" not in {c["name"] for c in inspect(connection).get_columns("tasks")}:
+            connection.execute(text("ALTER TABLE tasks ADD COLUMN priority VARCHAR(16) NOT NULL DEFAULT 'normal'"))

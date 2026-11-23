@@ -1,9 +1,10 @@
 from contextlib import asynccontextmanager
+from typing import Literal
 
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import select, case
 from sqlalchemy.orm import Session
 
 from .database import Base, engine, get_db
@@ -12,7 +13,7 @@ from . import study_models  # noqa: F401 — регистрация таблиц
 from .study_routes import router as study_router
 from .event_routes import router as event_router
 from .auth import router as auth_router, User, current_user
-from .migrations import migrate_owners
+from .migrations import migrate_owners, migrate_task_priority
 from .timetable_routes import router as timetable_router
 
 
@@ -20,6 +21,7 @@ from .timetable_routes import router as timetable_router
 async def lifespan(app: FastAPI):
     Base.metadata.create_all(bind=engine)
     migrate_owners(engine)
+    migrate_task_priority(engine)
     yield
 
 
@@ -37,15 +39,18 @@ app.add_middleware(
 
 
 class TaskCreate(BaseModel):
+    priority: Literal["low", "normal", "high"] = "normal"
     title: str = Field(min_length=1, max_length=255)
 
 
 class TaskUpdate(BaseModel):
+    priority: Literal["low", "normal", "high"] | None = None
     title: str | None = Field(default=None, min_length=1, max_length=255)
     completed: bool | None = None
 
 
 class TaskResponse(BaseModel):
+    priority: str
     id: int
     title: str
     completed: bool
@@ -65,7 +70,7 @@ def list_tasks(db: Session = Depends(get_db), user: User = Depends(current_user)
 
 @app.post("/api/tasks", response_model=TaskResponse, status_code=201)
 def create_task(payload: TaskCreate, db: Session = Depends(get_db), user: User = Depends(current_user)):
-    task = Task(title=payload.title.strip(), owner_id=user.id)
+    task = Task(title=payload.title.strip(), owner_id=user.id, priority=payload.priority)
     if not task.title:
         raise HTTPException(status_code=422, detail="Название не может быть пустым")
     db.add(task)
@@ -83,6 +88,8 @@ def update_task(task_id: int, payload: TaskUpdate, db: Session = Depends(get_db)
         task.title = payload.title.strip()
         if not task.title:
             raise HTTPException(status_code=422, detail="Название не может быть пустым")
+    if payload.priority is not None:
+        task.priority = payload.priority
     if payload.completed is not None:
         task.completed = payload.completed
     db.commit()
