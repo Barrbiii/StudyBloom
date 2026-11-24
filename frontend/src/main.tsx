@@ -1,6 +1,7 @@
 import { apiFetch } from './api';
 import React from 'react';
 import { filterTasks, TaskFilter } from './taskFilters';
+import { Insights } from './Insights';
 import { Habits } from './Habits';
 import { Pomodoro } from './Pomodoro';
 import { Timetable } from './Timetable';
@@ -173,6 +174,7 @@ function App() {
       <nav aria-label="Основная навигация">
         <a href="#overview"><span aria-hidden="true">⌂</span>Обзор</a>
         <a href="#tasks"><span aria-hidden="true">✓</span>Мои задачи</a>
+        <a href="#analytics"><span aria-hidden="true">▥</span>Аналитика</a>
         <a href="#habits"><span aria-hidden="true">❀</span>Привычки</a>
         <a href="#pomodoro"><span aria-hidden="true">◴</span>Pomodoro</a>
         <a href="#timetable"><span aria-hidden="true">▤</span>Расписание</a>
@@ -194,6 +196,7 @@ function App() {
         <article className="overview-card"><span className="card-kicker">МАЛЕНЬКИЕ ПОБЕДЫ</span><div className="stat-value">{loading ? '…' : `${completed} / ${tasks.length}`}<span>задач выполнено</span></div><div className="progress-track" role="progressbar" aria-label="Выполненные задачи" aria-valuemin={0} aria-valuemax={100} aria-valuenow={progress}><span style={{ width: `${progress}%` }} /></div><p>{tasks.length ? 'Каждая галочка — ещё один шаг вперёд.' : 'Всё начинается с первой маленькой задачи.'}</p></article>
         <article className="overview-card next-deadline"><span className="card-kicker">НА ГОРИЗОНТЕ</span><h2>{nearest?.title || 'Место для новых планов'}</h2><p>{nearest ? `${subjects.find(subject => subject.id === nearest.subject_id)?.name || 'Предмет'} · ${parseDate(nearest.due_date).toLocaleDateString('ru-RU', { day: 'numeric', month: 'long' })}` : 'Добавь дедлайн — мы сохраним его в календаре.'}</p><a href="#deadlines">{nearest ? 'Открыть дедлайны' : 'Добавить дедлайн'} <span aria-hidden="true">↗</span></a></article>
       </section>
+      <Insights />
       <div className="planner-grid">
     <section className="panel tasks-panel" id="tasks">
       <div className="panel-heading"><div><p className="card-kicker">ШАГ ЗА ШАГОМ</p><h2>Мои задачи</h2></div><span className="count-badge">{tasks.length}</span></div>

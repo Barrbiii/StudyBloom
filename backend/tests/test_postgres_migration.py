@@ -43,6 +43,8 @@ def test_postgres_personal_tools(monkeypatch):
     from fastapi import HTTPException
     from app import pomodoro_routes as focus
     from app import habit_routes as habits
+    from app import dashboard_routes as dashboard
+    from app.database import Base
     schema = 'focus_' + uuid.uuid4().hex
     admin = create_engine(os.environ['POSTGRES_TEST_URL'])
     with admin.begin() as conn:
@@ -52,9 +54,7 @@ def test_postgres_personal_tools(monkeypatch):
         with engine.begin() as conn:
             conn.execute(text('CREATE TABLE users (id INTEGER PRIMARY KEY)'))
             conn.execute(text('INSERT INTO users VALUES (1)'))
-        focus.FocusSession.__table__.create(engine)
-        habits.Habit.__table__.create(engine)
-        habits.HabitDay.__table__.create(engine)
+        Base.metadata.create_all(engine)
         at = datetime(2026, 11, 24, 12, tzinfo=timezone.utc)
         monkeypatch.setattr(focus, 'now', lambda: at)
         user = SimpleNamespace(id=1)
@@ -75,6 +75,10 @@ def test_postgres_personal_tools(monkeypatch):
             result = habits.listing(day, 'Europe/Moscow', db, user)[0]
             assert result['day_target'] == 10 and result['value'] == 12 and result['current_streak'] == 1
             assert len(habits.history(habit['id'], 30, 'Europe/Moscow', db, user)) == 1
+            summary = dashboard.overview('Europe/Moscow', db, user)
+            assert summary['tasks']['total'] == 0
+            assert summary['habits_today'] == {'total': 1, 'completed': 1}
+            assert len(summary['focus_week']) == 7
     finally:
         engine.dispose()
         with admin.begin() as conn:

@@ -17,6 +17,7 @@ from .migrations import migrate_owners, migrate_task_priority
 from .timetable_routes import router as timetable_router
 from .pomodoro_routes import router as pomodoro_router
 from .habit_routes import router as habit_router
+from .dashboard_routes import router as dashboard_router
 
 
 @asynccontextmanager
@@ -34,6 +35,7 @@ app.include_router(auth_router)
 app.include_router(timetable_router)
 app.include_router(pomodoro_router)
 app.include_router(habit_router)
+app.include_router(dashboard_router)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:5173"],
