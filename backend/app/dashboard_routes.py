@@ -1,5 +1,5 @@
 """Personal overview: daily local schedule and seven calendar days of focus."""
-from datetime import timedelta
+from datetime import timedelta, timezone
 from zoneinfo import ZoneInfo
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy import func, select
@@ -36,8 +36,8 @@ def overview(tz: str = Query(default='Europe/Moscow', max_length=100),
     first = day - timedelta(days=6)
     # Restrict candidates by UTC: final grouping uses the requested local calendar date.
     from datetime import datetime, time
-    lower = datetime.combine(first, time.min, tzinfo=zone)
-    upper = datetime.combine(day + timedelta(days=1), time.min, tzinfo=zone)
+    lower = datetime.combine(first, time.min, tzinfo=zone).astimezone(timezone.utc)
+    upper = datetime.combine(day + timedelta(days=1), time.min, tzinfo=zone).astimezone(timezone.utc)
     sessions = db.scalars(select(FocusSession).where(FocusSession.owner_id == user.id,
         FocusSession.mode == 'focus', FocusSession.state == 'completed',
         FocusSession.finished_at >= lower, FocusSession.finished_at < upper)).all()
