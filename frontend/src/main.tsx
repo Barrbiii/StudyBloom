@@ -1,6 +1,7 @@
 import { apiFetch } from './api';
 import React from 'react';
 import { filterTasks, TaskFilter } from './taskFilters';
+import { Pomodoro } from './Pomodoro';
 import { Timetable } from './Timetable';
 import { AuthGate } from './AuthGate';
 import { createRoot } from 'react-dom/client';
@@ -171,6 +172,7 @@ function App() {
       <nav aria-label="Основная навигация">
         <a href="#overview"><span aria-hidden="true">⌂</span>Обзор</a>
         <a href="#tasks"><span aria-hidden="true">✓</span>Мои задачи</a>
+        <a href="#pomodoro"><span aria-hidden="true">◴</span>Pomodoro</a>
         <a href="#timetable"><span aria-hidden="true">▤</span>Расписание</a>
         <a href="#calendar"><span aria-hidden="true">▦</span>Календарь</a>
         <a href="#subjects"><span aria-hidden="true">♧</span>Предметы</a>
@@ -250,7 +252,8 @@ function App() {
       {deadlines.length === 0 && <p className="note">Пока нет дедлайнов. Можно выдохнуть 🌷</p>}
     </section>
     </div>
-    <Timetable subjects={subjects} />
+    <Pomodoro />
+      <Timetable subjects={subjects} />
     <div id="calendar"><Calendar subjects={subjects} deadlines={deadlines} onSaved={loadStudy} /></div>
     <footer><BloomMark /><span>Пусть твои планы расцветают.</span><small>StudyBloom · твой уютный ежедневник</small></footer>
   </main></div>;
