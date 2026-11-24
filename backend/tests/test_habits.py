@@ -82,3 +82,14 @@ def test_unit_change_preserves_history_semantics(client, day):
     assert client.put(path + f'/days/{day}', json={'value': 3}).status_code == 200
     assert client.put(path, json={'name': 'Чтение', 'unit': 'минут'}).status_code == 409
     assert client.get('/api/habits').json()[0]['unit'] == 'страниц'
+
+
+def test_timezone_determines_calendar_day(monkeypatch):
+    from datetime import datetime, timezone
+    class Clock:
+        @classmethod
+        def now(cls, zone):
+            return datetime(2026, 11, 24, 22, 30, tzinfo=timezone.utc).astimezone(zone)
+    monkeypatch.setattr(habits, 'datetime', Clock)
+    assert habits.today('Europe/Moscow') == date(2026, 11, 25)
+    assert habits.today('America/New_York') == date(2026, 11, 24)
