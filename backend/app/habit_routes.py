@@ -7,6 +7,7 @@ from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import Boolean, Date, ForeignKey, Integer, String, UniqueConstraint, select
 from sqlalchemy.orm import Mapped, Session, mapped_column
 from .auth import User, current_user
+from .habit_streaks import streaks
 from .database import Base, get_db
 
 router = APIRouter(prefix='/api/habits', tags=['Привычки'])
@@ -121,7 +122,7 @@ def listing(day: date | None = None, tz: str = Query(default='Europe/Moscow', ma
     for item in habits:
         days = [row for row in records if row.habit_id == item.id]
         row = next((row for row in days if row.day == selected), None)
-        result.append(base(item) | {'day': selected, 'value': row.value if row else 0,
+        result.append(base(item) | streaks([r.day for r in days if r.value >= r.target], today(tz)) | {'day': selected, 'value': row.value if row else 0,
             'day_target': row.target if row else item.target,
             'completed': bool(row and row.value >= row.target)})
     return result
