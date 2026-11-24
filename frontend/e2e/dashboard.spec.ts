@@ -20,7 +20,8 @@ test('обзор отображает реальные данные API, обн�
   await expect(panel).toContainText('25 минут завершённой концентрации');
   await panel.getByText('Точные значения графика', { exact: true }).click();
   await expect(panel.locator('tbody tr')).toHaveCount(7);
-  await page.getByRole('checkbox', { name: 'Задача для проверки', exact: true }).check();
+  await page.getByRole('checkbox', { name: 'Задача для проверки', exact: true }).click();
+  await expect(page.getByRole('checkbox', { name: 'Задача для проверки', exact: true })).toBeChecked();
   await expect(panel.locator('.insight-stats')).toContainText('2 / 2');
   await panel.scrollIntoViewIfNeeded();
   await page.screenshot({ path: info.outputPath('dashboard-desktop.png') });
