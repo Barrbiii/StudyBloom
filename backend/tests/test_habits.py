@@ -62,3 +62,15 @@ def test_habit_account_isolation(client, day, monkeypatch):
     assert client.get('/api/habits').json() == []
     assert client.put(f"/api/habits/{item['id']}", json={'name': 'Чужая'}).status_code == 404
     assert client.put(f"/api/habits/{item['id']}/days/{day}", json={'value': 1}).status_code == 404
+
+
+def test_history_limits_and_streaks(client, day):
+    item = client.post('/api/habits', json={'name': 'Конспект'}).json()
+    for n in [1, 2, 3, 6, 7]:
+        assert client.put(f"/api/habits/{item['id']}/days/{day-timedelta(days=n)}", json={'value': 1}).status_code == 200
+    listed = client.get('/api/habits').json()[0]
+    assert listed['current_streak'] == 3 and listed['best_streak'] == 3
+    history = client.get(f"/api/habits/{item['id']}/history?days=3").json()
+    assert len(history) == 2 and history[0]['day'] == str(day-timedelta(days=1))
+    assert client.get(f"/api/habits/{item['id']}/history?days=0").status_code == 422
+    assert client.get('/api/habits/999/history').status_code == 404

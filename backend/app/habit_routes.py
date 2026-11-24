@@ -126,3 +126,14 @@ def listing(day: date | None = None, tz: str = Query(default='Europe/Moscow', ma
             'day_target': row.target if row else item.target,
             'completed': bool(row and row.value >= row.target)})
     return result
+
+
+@router.get('/{habit_id}/history')
+def history(habit_id: int, days: int = Query(default=30, ge=1, le=366),
+            tz: str = Query(default='Europe/Moscow', max_length=100),
+            db: Session = Depends(get_db), user: User = Depends(current_user)):
+    item = owned(db, habit_id, user)
+    current = today(tz)
+    rows = db.scalars(select(HabitDay).where(HabitDay.habit_id == item.id,
+        HabitDay.day >= current - timedelta(days=days-1), HabitDay.day <= current).order_by(HabitDay.day.desc())).all()
+    return [{'day': r.day, 'value': r.value, 'target': r.target, 'completed': r.value >= r.target} for r in rows]
