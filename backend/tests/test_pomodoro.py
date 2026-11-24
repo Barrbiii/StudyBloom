@@ -25,6 +25,8 @@ def test_pause_resume_and_finish(client, clock):
     assert client.get('/api/pomodoro/current').json() is None
     history = client.get('/api/pomodoro/history').json()
     assert len(history) == 1 and history[0]['elapsed_seconds'] == 60
+    assert history[0]['created_at'].endswith('Z')
+    assert history[0]['finished_at'].endswith('Z')
 
 def test_unique_active_and_cancellation(client, clock):
     item = client.post('/api/pomodoro/sessions', json={'minutes': 25}).json()

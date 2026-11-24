@@ -49,7 +49,10 @@ def elapsed(item, at=None):
 
 
 def view(item):
-    return {key: getattr(item, key) for key in ('id', 'mode', 'state', 'duration_seconds', 'created_at', 'finished_at')} | {'elapsed_seconds': elapsed(item)}
+    return {key: getattr(item, key) for key in ('id', 'mode', 'state', 'duration_seconds')} | {
+        'created_at': utc(item.created_at),
+        'finished_at': utc(item.finished_at) if item.finished_at else None,
+        'elapsed_seconds': elapsed(item)}
 
 
 @router.get('/current')
