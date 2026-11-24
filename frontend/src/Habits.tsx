@@ -33,7 +33,7 @@ export function Habits() {
     e.preventDefault(); if (!draft || busy) return;
     setBusy(true); setError('');
     try { await write(draft.id ? `/${draft.id}` : '', draft.id ? 'PUT' : 'POST', draft); await load(); setDraft(null); }
-    catch { setError('Не удалось сохранить привычку. Проверь название и цель.'); }
+    catch { setError('Не удалось сохранить привычку. Проверь название и цель. После первой отметки единицу измерения менять нельзя.'); }
     finally { setBusy(false); }
   }
   async function mark(item: Habit, value: number) {

@@ -74,3 +74,11 @@ def test_history_limits_and_streaks(client, day):
     assert len(history) == 2 and history[0]['day'] == str(day-timedelta(days=1))
     assert client.get(f"/api/habits/{item['id']}/history?days=0").status_code == 422
     assert client.get('/api/habits/999/history').status_code == 404
+
+
+def test_unit_change_preserves_history_semantics(client, day):
+    item = client.post('/api/habits', json={'name': 'Чтение', 'unit': 'страниц'}).json()
+    path = f"/api/habits/{item['id']}"
+    assert client.put(path + f'/days/{day}', json={'value': 3}).status_code == 200
+    assert client.put(path, json={'name': 'Чтение', 'unit': 'минут'}).status_code == 409
+    assert client.get('/api/habits').json()[0]['unit'] == 'страниц'

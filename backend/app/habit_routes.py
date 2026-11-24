@@ -88,6 +88,8 @@ def create(data: HabitWrite, db: Session = Depends(get_db), user: User = Depends
 @router.put('/{habit_id}')
 def update(habit_id: int, data: HabitWrite, db: Session = Depends(get_db), user: User = Depends(current_user)):
     item = owned(db, habit_id, user)
+    if data.unit != item.unit and db.scalar(select(HabitDay.id).where(HabitDay.habit_id == item.id).limit(1)) is not None:
+        raise HTTPException(409, 'Для новой единицы измерения создай отдельную привычку: история уже сохранена')
     for key, value in data.model_dump().items():
         setattr(item, key, value)
     db.commit()
