@@ -36,12 +36,13 @@ def test_postgres_legacy_migration():
 
 
 @pytest.mark.skipif(not os.getenv('POSTGRES_TEST_URL'), reason='Требуется тестовый PostgreSQL')
-def test_postgres_focus_lifecycle(monkeypatch):
+def test_postgres_personal_tools(monkeypatch):
     from datetime import datetime, timedelta, timezone
     from types import SimpleNamespace
     from sqlalchemy.orm import Session
     from fastapi import HTTPException
     from app import pomodoro_routes as focus
+    from app import habit_routes as habits
     schema = 'focus_' + uuid.uuid4().hex
     admin = create_engine(os.environ['POSTGRES_TEST_URL'])
     with admin.begin() as conn:
@@ -52,6 +53,8 @@ def test_postgres_focus_lifecycle(monkeypatch):
             conn.execute(text('CREATE TABLE users (id INTEGER PRIMARY KEY)'))
             conn.execute(text('INSERT INTO users VALUES (1)'))
         focus.FocusSession.__table__.create(engine)
+        habits.Habit.__table__.create(engine)
+        habits.HabitDay.__table__.create(engine)
         at = datetime(2026, 11, 24, 12, tzinfo=timezone.utc)
         monkeypatch.setattr(focus, 'now', lambda: at)
         user = SimpleNamespace(id=1)
@@ -64,6 +67,14 @@ def test_postgres_focus_lifecycle(monkeypatch):
             assert focus.transition(item['id'], 'finish', db, user)['state'] == 'completed'
             assert focus.stats(db, user)['focus_seconds'] == 60
             assert focus.start(focus.Start(minutes=5), db, user)['state'] == 'running'
+            habit = habits.create(habits.HabitWrite(name='Читать', target=10), db, user)
+            day = habits.today('Europe/Moscow')
+            assert habits.record(habit['id'], day, habits.DayWrite(value=10), 'Europe/Moscow', db, user)['completed']
+            habits.record(habit['id'], day, habits.DayWrite(value=12), 'Europe/Moscow', db, user)
+            habits.update(habit['id'], habits.HabitWrite(name='Читать', target=20), db, user)
+            result = habits.listing(day, 'Europe/Moscow', db, user)[0]
+            assert result['day_target'] == 10 and result['value'] == 12 and result['current_streak'] == 1
+            assert len(habits.history(habit['id'], 30, 'Europe/Moscow', db, user)) == 1
     finally:
         engine.dispose()
         with admin.begin() as conn:
