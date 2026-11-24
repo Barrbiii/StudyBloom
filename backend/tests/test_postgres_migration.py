@@ -33,3 +33,39 @@ def test_postgres_legacy_migration():
         with admin.begin() as conn:
             conn.execute(text(f'DROP SCHEMA {schema} CASCADE'))
         admin.dispose()
+
+
+@pytest.mark.skipif(not os.getenv('POSTGRES_TEST_URL'), reason='Требуется тестовый PostgreSQL')
+def test_postgres_focus_lifecycle(monkeypatch):
+    from datetime import datetime, timedelta, timezone
+    from types import SimpleNamespace
+    from sqlalchemy.orm import Session
+    from fastapi import HTTPException
+    from app import pomodoro_routes as focus
+    schema = 'focus_' + uuid.uuid4().hex
+    admin = create_engine(os.environ['POSTGRES_TEST_URL'])
+    with admin.begin() as conn:
+        conn.execute(text(f'CREATE SCHEMA {schema}'))
+    engine = create_engine(os.environ['POSTGRES_TEST_URL'], connect_args={'options': f'-csearch_path={schema}'})
+    try:
+        with engine.begin() as conn:
+            conn.execute(text('CREATE TABLE users (id INTEGER PRIMARY KEY)'))
+            conn.execute(text('INSERT INTO users VALUES (1)'))
+        focus.FocusSession.__table__.create(engine)
+        at = datetime(2026, 11, 24, 12, tzinfo=timezone.utc)
+        monkeypatch.setattr(focus, 'now', lambda: at)
+        user = SimpleNamespace(id=1)
+        with Session(engine) as db:
+            item = focus.start(focus.Start(minutes=1), db, user)
+            with pytest.raises(HTTPException) as error:
+                focus.start(focus.Start(minutes=1), db, user)
+            assert error.value.status_code == 409
+            at += timedelta(seconds=60)
+            assert focus.transition(item['id'], 'finish', db, user)['state'] == 'completed'
+            assert focus.stats(db, user)['focus_seconds'] == 60
+            assert focus.start(focus.Start(minutes=5), db, user)['state'] == 'running'
+    finally:
+        engine.dispose()
+        with admin.begin() as conn:
+            conn.execute(text(f'DROP SCHEMA {schema} CASCADE'))
+        admin.dispose()
