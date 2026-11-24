@@ -7,7 +7,6 @@ import subprocess
 import time
 import urllib.error
 import urllib.request
-from datetime import date
 
 if os.getenv('STUDYBLOOM_SMOKE') != '1':
     raise SystemExit('Только тестовое окружение: STUDYBLOOM_SMOKE=1 python scripts/verify-compose.py')
