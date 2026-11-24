@@ -114,3 +114,13 @@ def history(db: Session = Depends(get_db), user: User = Depends(current_user)):
     items = db.scalars(select(FocusSession).where(FocusSession.owner_id == user.id,
         FocusSession.active_owner.is_(None)).order_by(FocusSession.id.desc()).limit(100)).all()
     return [view(item) for item in items]
+
+
+@router.get('/stats')
+def stats(db: Session = Depends(get_db), user: User = Depends(current_user)):
+    from sqlalchemy import func
+    count, seconds = db.execute(select(func.count(FocusSession.id),
+        func.coalesce(func.sum(FocusSession.duration_seconds), 0)).where(
+        FocusSession.owner_id == user.id, FocusSession.mode == 'focus',
+        FocusSession.state == 'completed')).one()
+    return {'completed_sessions': count, 'focus_seconds': seconds}

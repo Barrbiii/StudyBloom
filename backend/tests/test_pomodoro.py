@@ -55,3 +55,12 @@ def test_focus_isolation(client, monkeypatch):
     assert client.get('/api/pomodoro/history').json() == []
     assert client.post(f"/api/pomodoro/sessions/{item['id']}/cancel").status_code == 404
     assert client.post('/api/pomodoro/sessions', json={}).status_code == 201
+
+
+def test_statistics_exclude_breaks_cancellations_and_active(client, clock):
+    for mode, action in [('focus', 'finish'), ('break', 'finish'), ('focus', 'cancel')]:
+        item = client.post('/api/pomodoro/sessions', json={'mode': mode, 'minutes': 1}).json()
+        clock(65)
+        assert client.post(f"/api/pomodoro/sessions/{item['id']}/{action}").status_code == 200
+    client.post('/api/pomodoro/sessions', json={'minutes': 1})
+    assert client.get('/api/pomodoro/stats').json() == {'completed_sessions': 1, 'focus_seconds': 60}
