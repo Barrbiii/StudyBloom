@@ -34,9 +34,10 @@ test('ежедневник: формы, календарь и мобильная
   await expect(page.getByRole('progressbar')).toHaveAttribute('aria-valuenow', '25');
   await page.getByRole('button', { name: 'Неделя', exact: true }).click();
   await expect(page.locator('.calendar-day')).toHaveCount(7);
-  for (const width of [360, 390, 768]) {
+  for (const width of [360, 390, 768, 960]) {
     await page.setViewportSize({ width, height: 900 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
+    expect(await page.getByLabel('Название задачи', { exact: true }).evaluate(el => el.getBoundingClientRect().width)).toBeGreaterThanOrEqual(160);
   }
   await page.setViewportSize({ width: 390, height: 844 });
   await page.getByRole('navigation').getByRole('link', { name: 'Мои задачи' }).click();
