@@ -53,6 +53,23 @@ jobs:
             if [ "$code" = "429" ]; then limited=true; fi
           done
           test "$limited" = true
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - name: Сбросить тестовое окно лимита перед браузером
+        run: docker compose restart frontend
+      - name: Проверить браузер с настоящим Docker API
+        working-directory: frontend
+        run: |
+          npm ci
+          npx playwright install --with-deps chromium
+          npm run test:live
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: live-browser-screenshots
+          path: frontend/test-results-live/
+          retention-days: 14
       - name: Остановить тестовые контейнеры
         if: always()
         run: docker compose down

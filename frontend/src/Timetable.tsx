@@ -32,8 +32,8 @@ export function Timetable({ subjects }: { subjects: Subject[] }) {
     {!subjects.length && <p className="note">Сначала добавь предмет.</p>}
     {(error || loadError) && <p role="alert">{error || loadError} <button type="button" onClick={() => void load().catch(() => setError('Сервер недоступен.'))}>Повторить</button></p>}
     {draft && <form className="lesson-form" onSubmit={save}>
-      <label>Предмет занятия<select required value={draft.subject_id} onChange={e=>setDraft({...draft,subject_id:Number(e.target.value)})}>{subjects.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
-      <label>День недели<select value={draft.weekday} onChange={e=>setDraft({...draft,weekday:Number(e.target.value)})}>{days.map((day,i)=><option key={day} value={i}>{day}</option>)}</select></label>
+      <label>Предмет занятия<select aria-label="Предмет занятия" required value={draft.subject_id} onChange={e=>setDraft({...draft,subject_id:Number(e.target.value)})}>{subjects.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
+      <label>День недели<select aria-label="День недели" value={draft.weekday} onChange={e=>setDraft({...draft,weekday:Number(e.target.value)})}>{days.map((day,i)=><option key={day} value={i}>{day}</option>)}</select></label>
       {fields.map(([key,label,type])=><label key={key}>{label}<input type={type} required={type!=='text'} maxLength={type==='text'?120:undefined} value={draft[key]} onChange={e=>setDraft({...draft,[key]:e.target.value})}/></label>)}
       <button disabled={busy} type="submit">Сохранить занятие</button><button disabled={busy} type="button" onClick={()=>setDraft(null)}>Отмена</button>
     </form>}
