@@ -47,6 +47,7 @@ test('реальный Docker: аккаунты, занятия, привычк�
   await page.locator('#tasks').scrollIntoViewIfNeeded();
   await page.screenshot({ path: info.outputPath('live-mobile.png') });
   await page.getByRole('button', { name: 'Выйти', exact: true }).click();
+  await page.getByRole('button', { name: 'Нет аккаунта? Зарегистрироваться', exact: true }).click();
   await page.getByLabel('Логин', { exact: true }).fill(username + '_b');
   await page.getByLabel('Пароль', { exact: true }).fill(password);
   await page.getByRole('button', { name: 'Создать аккаунт', exact: true }).click();
