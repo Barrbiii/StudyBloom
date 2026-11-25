@@ -45,6 +45,8 @@ def test_postgres_personal_tools(monkeypatch):
     from app import habit_routes as habits
     from app import dashboard_routes as dashboard
     from app.database import Base
+    from app import subtask_routes as steps
+    from app.models import Task
     schema = 'focus_' + uuid.uuid4().hex
     admin = create_engine(os.environ['POSTGRES_TEST_URL'])
     with admin.begin() as conn:
@@ -79,6 +81,10 @@ def test_postgres_personal_tools(monkeypatch):
             assert summary['tasks']['total'] == 0
             assert summary['habits_today'] == {'total': 1, 'completed': 1}
             assert len(summary['focus_week']) == 7
+            task = Task(owner_id=1, title='Доклад'); db.add(task); db.commit(); db.refresh(task)
+            step = steps.create(task.id, steps.Create(title='Источники'), db, user)
+            assert steps.update(task.id, step.id, steps.Update(completed=True), db, user).completed
+            assert len(steps.listing(task.id, db, user)) == 1
     finally:
         engine.dispose()
         with admin.begin() as conn:

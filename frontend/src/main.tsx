@@ -1,6 +1,7 @@
 import { apiFetch } from './api';
 import React from 'react';
 import { filterTasks, TaskFilter } from './taskFilters';
+import { Subtasks } from './Subtasks';
 import { LessonsProvider } from './Lessons';
 import { Insights } from './Insights';
 import { Habits } from './Habits';
@@ -139,6 +140,7 @@ function App() {
   async function removeTask(task: Task) {
     try {
       const response = await apiFetch(`${API}/${task.id}`, { method: 'DELETE' });
+      if (response.status === 409) { setError('Сначала удали шаги задачи: чек-лист сохранён.'); return; }
       if (!response.ok) throw new Error();
       await loadTasks();
     } catch {
@@ -224,6 +226,7 @@ function App() {
         </label>
         <select aria-label={`Приоритет: ${task.title}`} value={task.priority || 'normal'} onChange={e => void changePriority(task, e.target.value)}><option value="high">Высокий</option><option value="normal">Обычный</option><option value="low">Низкий</option></select>
         <button type="button" className="delete-task" aria-label={`Удалить: ${task.title}`} onClick={() => void removeTask(task)}>×</button>
+        <Subtasks taskId={task.id} title={task.title} />
       </div>)}
       <p className="panel-footnote">Не обязательно успеть всё. Начни с самого важного.</p>
     </section>

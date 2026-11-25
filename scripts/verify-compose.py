@@ -40,6 +40,8 @@ credentials = {'username': 'smoke_' + secrets.token_hex(8), 'password': secrets.
 request('/auth/register', credentials)
 request('/auth/login', credentials)
 task = request('/tasks', {'title': 'Docker: сохранить данные', 'priority': 'high'})
+step = request(f"/tasks/{task['id']}/subtasks", {'title': 'Docker: маленький шаг'})
+request(f"/tasks/{task['id']}/subtasks/{step['id']}", {'completed': True}, 'PATCH')
 subject = request('/subjects', {'name': 'Docker: учебный предмет'})
 request('/lessons', {'subject_id': subject['id'], 'weekday': 0, 'starts_at': '09:00',
     'ends_at': '10:00', 'starts_on': '2026-01-01', 'ends_on': '2030-12-31', 'room': '210', 'teacher': 'Тест'})
@@ -53,6 +55,7 @@ assert request('/dashboard?tz=America/New_York')['tasks']['total'] == 1
 subprocess.run(['docker', 'compose', 'restart', 'backend'], check=True)
 healthy()
 assert request('/tasks')[0]['id'] == task['id']
+assert request(f"/tasks/{task['id']}/subtasks")[0]['completed'] is True
 assert len(request('/lessons')) == 1
 assert request('/habits?tz=Europe/Moscow')[0]['completed'] is True
 assert request('/pomodoro/current')['state'] == 'paused'

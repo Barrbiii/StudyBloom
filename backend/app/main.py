@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from .database import Base, engine, get_db
 from .models import Task
+from .subtask_routes import Subtask, router as subtask_router
 from . import study_models  # noqa: F401 — регистрация таблиц
 from .study_routes import router as study_router
 from .event_routes import router as event_router
@@ -29,6 +30,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="StudyBloom API", lifespan=lifespan)
+app.include_router(subtask_router)
 app.include_router(study_router)
 app.include_router(event_router)
 app.include_router(auth_router)
@@ -118,5 +120,7 @@ def delete_task(task_id: int, db: Session = Depends(get_db), user: User = Depend
     task = db.get(Task, task_id)
     if task is None or task.owner_id != user.id:
         raise HTTPException(status_code=404, detail="Задача не найдена")
+    if db.scalar(select(Subtask.id).where(Subtask.task_id == task.id).limit(1)) is not None:
+        raise HTTPException(409, 'Сначала удали шаги задачи: чек-лист будет сохранён')
     db.delete(task)
     db.commit()

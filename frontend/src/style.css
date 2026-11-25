@@ -76,3 +76,13 @@ main{min-width:0;padding:29px clamp(22px,4vw,60px) 0}.page-header{display:flex;j
 .calendar-lesson { background: #eef0e4; border-color: #b5bda4; color: #495744; }
 .calendar-lesson strong { font-weight: 600; }
 .calendar-lesson small { color: #60715c; }
+.task { flex-wrap: wrap; }
+.subtasks { flex: 1 0 100%; min-width: 0; padding: .2rem 0 .2rem 1.6rem; }
+.subtask-toggle { background: transparent; color: #865561; padding: .5rem 0; font-weight: 400; }
+.subtask-row { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; border-bottom: 1px dashed #e5d6cf; padding: .6rem 0; }
+.subtask-row > label { flex: 1 1 150px; min-width: 0; }
+.subtask-row span { overflow-wrap: anywhere; }
+.subtask-row button { padding: .4rem .65rem; font-size: .8rem; }
+.subtask-row form, .subtask-add { width: 100%; display: flex; flex-wrap: wrap; gap: .5rem; margin: .7rem 0; }
+.subtask-add input, .subtask-row form input { flex: 1 1 160px; min-width: 0; }
+@media (max-width: 480px) { .subtasks { padding-left: 0; } .subtask-add button { width: 100%; } }
