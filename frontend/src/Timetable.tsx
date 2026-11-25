@@ -1,21 +1,14 @@
 import React from 'react';
+import { useLessons } from './Lessons';
 import { apiFetch } from './api';
 import { dateKey, addDays } from './calendarDates';
 type Subject = { id: number; name: string };
-type Lesson = { id?: number; subject_id: number; weekday: number; starts_at: string; ends_at: string; starts_on: string; ends_on: string; room: string; teacher: string };
 const days = ['Понедельник','Вторник','Среда','Четверг','Пятница','Суббота','Воскресенье'];
 const fields = [['starts_at','Начало занятия','time'],['ends_at','Конец занятия','time'],['starts_on','С даты','date'],['ends_on','По дату','date'],['room','Аудитория','text'],['teacher','Преподаватель','text']] as const;
 export function Timetable({ subjects }: { subjects: Subject[] }) {
-  const [lessons,setLessons] = React.useState<Lesson[]>([]);
-  const [draft,setDraft] = React.useState<Lesson | null>(null);
+  const { lessons, draft, setDraft, load, loadError } = useLessons();
   const [error,setError] = React.useState('');
   const [busy,setBusy] = React.useState(false);
-  async function load() {
-    const r = await apiFetch('/api/lessons');
-    if (!r.ok) throw Error();
-    setLessons(await r.json()); setError('');
-  }
-  React.useEffect(() => { void load().catch(() => setError('Не удалось загрузить расписание.')); }, []);
   async function save(e: React.FormEvent) {
     e.preventDefault(); if(!draft || busy) return;
     setBusy(true);
@@ -37,7 +30,7 @@ export function Timetable({ subjects }: { subjects: Subject[] }) {
     <p className="note">Повторяется еженедельно в указанном периоде. Время местное.</p>
     <button type="button" disabled={!subjects.length || busy} onClick={() => setDraft({ subject_id:subjects[0].id, weekday:0, starts_at:'09:00', ends_at:'10:30', starts_on:dateKey(new Date()), ends_on:dateKey(addDays(new Date(),90)), room:'', teacher:'' })}>Добавить занятие</button>
     {!subjects.length && <p className="note">Сначала добавь предмет.</p>}
-    {error && <p role="alert">{error} <button type="button" onClick={() => void load().catch(() => setError('Сервер недоступен.'))}>Повторить</button></p>}
+    {(error || loadError) && <p role="alert">{error || loadError} <button type="button" onClick={() => void load().catch(() => setError('Сервер недоступен.'))}>Повторить</button></p>}
     {draft && <form className="lesson-form" onSubmit={save}>
       <label>Предмет занятия<select required value={draft.subject_id} onChange={e=>setDraft({...draft,subject_id:Number(e.target.value)})}>{subjects.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
       <label>День недели<select value={draft.weekday} onChange={e=>setDraft({...draft,weekday:Number(e.target.value)})}>{days.map((day,i)=><option key={day} value={i}>{day}</option>)}</select></label>

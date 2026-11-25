@@ -1,6 +1,7 @@
 import { apiFetch } from './api';
 import React from 'react';
 import { filterTasks, TaskFilter } from './taskFilters';
+import { LessonsProvider } from './Lessons';
 import { Insights } from './Insights';
 import { Habits } from './Habits';
 import { Pomodoro } from './Pomodoro';
@@ -265,4 +266,4 @@ function App() {
   </main></div>;
 }
 
-createRoot(document.getElementById('root')!).render(<AuthGate><App /></AuthGate>);
+createRoot(document.getElementById('root')!).render(<AuthGate><LessonsProvider><App /></LessonsProvider></AuthGate>);
