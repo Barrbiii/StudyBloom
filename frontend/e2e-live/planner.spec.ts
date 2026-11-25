@@ -21,7 +21,7 @@ test('реальный Docker: аккаунты, занятия, привычк�
   await expect(page.locator('.subject-chip')).toContainText('Алгебра интеграция');
   await page.getByRole('button', { name: 'Добавить занятие', exact: true }).click();
   const weekday = await page.evaluate(() => String((new Date().getDay() + 6) % 7));
-  await page.getByLabel('День недели', { exact: true }).selectOption(weekday);
+  await page.getByRole('combobox', { name: 'День недели', exact: true }).selectOption(weekday);
   await page.getByLabel('Аудитория', { exact: true }).fill('210');
   await page.getByLabel('Преподаватель', { exact: true }).fill('Волков');
   await page.getByRole('button', { name: 'Сохранить занятие', exact: true }).click();
