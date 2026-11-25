@@ -1,3 +1,5 @@
+import { useLessons } from './Lessons';
+import { occursOn } from './lessonDates';
 import { apiFetch } from './api';
 import React from 'react';
 import { CalendarEvent, EventEditor } from './EventEditor';
@@ -9,6 +11,7 @@ type Props = { subjects: Subject[]; deadlines: Deadline[]; onSaved: () => Promis
 const weekdays = ['Пн', 'Вт', 'Ср', 'Чт', 'Пт', 'Сб', 'Вс'];
 
 export function Calendar({ subjects, deadlines, onSaved }: Props) {
+  const { lessons, setDraft: editLesson, load: loadLessons, loadError } = useLessons();
   const [events, setEvents] = React.useState<CalendarEvent[]>([]);
   const [eventEditor, setEventEditor] = React.useState<CalendarEvent | null | undefined>(undefined);
   const [eventError, setEventError] = React.useState('');
@@ -48,6 +51,7 @@ export function Calendar({ subjects, deadlines, onSaved }: Props) {
   }
 
   return <section className="panel calendar" aria-label="Календарь дедлайнов">
+    {loadError && <p role="alert">{loadError} <button type="button" onClick={() => void loadLessons().catch(() => {})}>Повторить загрузку занятий</button></p>}
     {eventError && <p role="alert">{eventError} <button type="button" onClick={() => void loadEvents().catch(() => setEventError('Не удалось загрузить события.'))}>Повторить</button></p>}
     <button type="button" onClick={() => setEventEditor(null)}>Добавить событие</button>
     {eventEditor !== undefined && <EventEditor key={eventEditor?.id ?? "new"} event={eventEditor} onSaved={loadEvents} onClose={() => setEventEditor(undefined)} />}
@@ -65,7 +69,7 @@ export function Calendar({ subjects, deadlines, onSaved }: Props) {
         {subjects.map(subject => <option key={subject.id} value={subject.id}>{subject.name}</option>)}
       </select>
     </div>
-    <p className="note">Выбери дедлайн, чтобы изменить название, предмет или дату.</p>
+    <p className="note">Выбери дедлайн или событие для изменения. Занятие откроет редактор недельного шаблона: изменения затронут все повторения.</p>
     <div className="calendar-scroll"><div className={`calendar-grid ${mode}`}>
       {weekdays.map(day => <div key={day} className="weekday">{day}</div>)}
       {days.map(day => {
@@ -76,6 +80,9 @@ export function Calendar({ subjects, deadlines, onSaved }: Props) {
           {events.filter(event => dateKey(new Date(event.starts_at)) <= key && dateKey(new Date(new Date(event.ends_at).getTime() - 1)) >= key).map(event => <button type="button" className="calendar-deadline calendar-event" key={`event-${event.id}`} onClick={() => setEventEditor(event)}>
             {event.title}<small>{new Date(event.starts_at).toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })} · {event.location}</small>
           </button>)}
+          {lessons.filter(l => occursOn(l, key) && (!filter || String(l.subject_id) === filter)).sort((a,b) => a.starts_at.localeCompare(b.starts_at)).map(l => <button key={`lesson-${l.id}`} type="button" className="calendar-deadline calendar-lesson" aria-label={`Изменить занятие: ${subjects.find(s => s.id === l.subject_id)?.name || 'Предмет'}, ${key}`} onClick={() => { editLesson(l); window.location.hash = 'timetable'; }}>
+            <strong>{subjects.find(s => s.id === l.subject_id)?.name || 'Предмет'}</strong><small>{l.starts_at.slice(0,5)}–{l.ends_at.slice(0,5)} · {l.room} {l.teacher}</small>
+          </button>)}
           {items.map(item => <button key={item.id} type="button" className="calendar-deadline" onClick={() => { setEditing({ ...item }); setError(''); }} aria-label={`Изменить дедлайн: ${item.title}, ${key}`}>
             <span className="subject-dot" style={{ background: subjects.find(s => s.id === item.subject_id)?.color }} />
             {item.title}<small>{subjects.find(s => s.id === item.subject_id)?.name}</small>
@@ -83,7 +90,7 @@ export function Calendar({ subjects, deadlines, onSaved }: Props) {
         </div>;
       })}
     </div></div>
-    {!deadlines.some(item => days.some(day => dateKey(day) === item.due_date) && (!filter || String(item.subject_id) === filter)) && <p className="note">В этом периоде нет дедлайнов. События показаны отдельно.</p>}
+    {!deadlines.some(item => days.some(day => dateKey(day) === item.due_date) && (!filter || String(item.subject_id) === filter)) && <p className="note">В этом периоде нет дедлайнов. События и занятия показаны отдельно.</p>}
     {editing && <div className="calendar-editor">
       <h3>Редактирование дедлайна</h3>
       <form onSubmit={save}>

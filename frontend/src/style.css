@@ -73,3 +73,6 @@ main{min-width:0;padding:29px clamp(22px,4vw,60px) 0}.page-header{display:flex;j
 .chart-table table { width: 100%; text-align: left; border-collapse: collapse; margin-top: 1rem; font-size: .85rem; }
 .chart-table th, .chart-table td { padding: .5rem; border-bottom: 1px solid #eaded8; }
 @media (max-width: 600px) { .insight-columns, .insight-stats { grid-template-columns: 1fr; } .chart-bars { gap: .3rem; } .chart-day { font-size: .65rem; } .focus-chart { padding: .75rem; } }
+.calendar-lesson { background: #eef0e4; border-color: #b5bda4; color: #495744; }
+.calendar-lesson strong { font-weight: 600; }
+.calendar-lesson small { color: #60715c; }
