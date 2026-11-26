@@ -46,6 +46,7 @@ def test_postgres_personal_tools(monkeypatch):
     from app import dashboard_routes as dashboard
     from app.database import Base
     from app import subtask_routes as steps
+    from app import recurring_routes as repeats
     from app.models import Task
     schema = 'focus_' + uuid.uuid4().hex
     admin = create_engine(os.environ['POSTGRES_TEST_URL'])
@@ -85,6 +86,10 @@ def test_postgres_personal_tools(monkeypatch):
             step = steps.create(task.id, steps.Create(title='Источники'), db, user)
             assert steps.update(task.id, step.id, steps.Update(completed=True), db, user).completed
             assert len(steps.listing(task.id, db, user)) == 1
+            template = repeats.create(repeats.Write(title='Повторение',cadence='daily',starts_on=day),db,user)
+            window = repeats.Window(from_day=day,through=day)
+            assert repeats.generate(template['id'],window,db,user)['created'] == 1
+            assert repeats.generate(template['id'],window,db,user)['created'] == 0
     finally:
         engine.dispose()
         with admin.begin() as conn:
