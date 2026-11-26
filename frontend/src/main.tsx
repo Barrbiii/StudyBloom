@@ -1,6 +1,7 @@
 import { apiFetch } from './api';
 import React from 'react';
 import { filterTasks, TaskFilter } from './taskFilters';
+import { RecurringTasks } from './RecurringTasks';
 import { Subtasks } from './Subtasks';
 import { LessonsProvider } from './Lessons';
 import { Insights } from './Insights';
@@ -178,6 +179,7 @@ function App() {
         <a href="#overview"><span aria-hidden="true">⌂</span>Обзор</a>
         <a href="#tasks"><span aria-hidden="true">✓</span>Мои задачи</a>
         <a href="#analytics"><span aria-hidden="true">▥</span>Аналитика</a>
+        <a href="#recurring"><span aria-hidden="true">↻</span>Повторения</a>
         <a href="#habits"><span aria-hidden="true">❀</span>Привычки</a>
         <a href="#pomodoro"><span aria-hidden="true">◴</span>Pomodoro</a>
         <a href="#timetable"><span aria-hidden="true">▤</span>Расписание</a>
@@ -261,6 +263,7 @@ function App() {
       {deadlines.length === 0 && <p className="note">Пока нет дедлайнов. Можно выдохнуть 🌷</p>}
     </section>
     </div>
+    <RecurringTasks onGenerated={loadTasks} />
     <Habits />
     <Pomodoro />
       <Timetable subjects={subjects} />
