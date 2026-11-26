@@ -48,13 +48,18 @@ request('/lessons', {'subject_id': subject['id'], 'weekday': 0, 'starts_at': '09
 habit = request('/habits', {'name': 'Docker: читать', 'target': 10, 'unit': 'страниц'})
 summary = request('/dashboard?tz=Europe/Moscow')
 request(f"/habits/{habit['id']}/days/{summary['day']}?tz=Europe/Moscow", {'value': 10}, 'PUT')
+repeat = request('/recurring-tasks', {'title':'Docker: повторение','cadence':'daily','starts_on':summary['day']})
+window = {'from_day':summary['day'],'through':summary['day']}
+assert request(f"/recurring-tasks/{repeat['id']}/generate",window)['created'] == 1
+assert request(f"/recurring-tasks/{repeat['id']}/generate",window)['created'] == 0
 focus = request('/pomodoro/sessions', {'minutes': 1})
 request(f"/pomodoro/sessions/{focus['id']}/pause", {})
 assert request('/dashboard?tz=Europe/Moscow')['habits_today']['completed'] == 1
-assert request('/dashboard?tz=America/New_York')['tasks']['total'] == 1
+assert request('/dashboard?tz=America/New_York')['tasks']['total'] == 2
 subprocess.run(['docker', 'compose', 'restart', 'backend'], check=True)
 healthy()
-assert request('/tasks')[0]['id'] == task['id']
+assert task['id'] in [row['id'] for row in request('/tasks')]
+assert request(f"/recurring-tasks/{repeat['id']}/generate",window)['created'] == 0
 assert request(f"/tasks/{task['id']}/subtasks")[0]['completed'] is True
 assert len(request('/lessons')) == 1
 assert request('/habits?tz=Europe/Moscow')[0]['completed'] is True
