@@ -1,4 +1,5 @@
 import React from 'react';
+import { focusCsv } from './focusCsv';
 import { apiFetch } from './api';
 import { addDays, dateKey, parseDate } from './calendarDates';
 type Overview = {
@@ -38,6 +39,13 @@ export function Insights() {
     document.addEventListener('visibilitychange', visible);
     return () => { token.current++; window.clearTimeout(pending); window.removeEventListener('studybloom:data-changed', changed); document.removeEventListener('visibilitychange', visible); };
   }, [period]);
+  function exportFocus() {
+    if (!data?.focus_week.length) return;
+    const blob = new Blob([focusCsv(data.focus_week,data.timezone)],{type:'text/csv;charset=utf-8'});
+    const url = URL.createObjectURL(blob), link = document.createElement('a');
+    link.href=url;link.download=`studybloom-focus-${data.focus_week[0].day}-${data.focus_week[data.focus_week.length-1].day}.csv`;
+    document.body.appendChild(link);link.click();link.remove();window.setTimeout(()=>URL.revokeObjectURL(url),1000);
+  }
   const max = Math.max(60, ...(data?.focus_week.map(row => row.seconds) || []));
   const minutes = data?.focus_week.reduce((sum, row) => sum + row.seconds / 60, 0) || 0;
   return <section id="analytics" className="panel insights" aria-label="Обзор и аналитика">
@@ -56,6 +64,7 @@ export function Insights() {
       <div className="insight-stats"><div><strong>{data.tasks.completed} / {data.tasks.total}</strong><span>задач выполнено за всё время</span></div><div><strong>{data.habits_today.completed} / {data.habits_today.total}</strong><span>привычек выполнено сегодня</span></div><div><strong>{data.overdue_deadlines}</strong><span>дедлайнов с прошедшей датой</span></div></div>
       <div className="insight-columns"><div><h3>Занятия сегодня</h3>{!data.lessons_today.length && <p className="note">Сегодня занятий нет.</p>}<ul className="agenda-list">{data.lessons_today.map(l => <li key={l.id}><time>{l.starts_at.slice(0,5)}–{l.ends_at.slice(0,5)}</time><strong>{l.subject}</strong><small>{l.room} {l.teacher}</small></li>)}</ul><a href="#timetable">Открыть расписание ↗</a></div>
       <div><h3>Ближайшие дедлайны</h3>{!data.upcoming_deadlines.length && <p className="note">Нет предстоящих дедлайнов.</p>}<ul className="agenda-list">{data.upcoming_deadlines.map(d => <li key={d.id}><time>{parseDate(d.due_date).toLocaleDateString('ru-RU')}</time><strong>{d.title}</strong></li>)}</ul><a href="#calendar">Открыть календарь ↗</a></div></div>
+      <button type="button" disabled={busy||!data.focus_week.length} onClick={exportFocus}>Экспорт периода в CSV</button>
       <figure className="focus-chart"><figcaption><h3>Концентрация за период</h3><p>{minutes} минут завершённой концентрации</p></figcaption>
         <p className="note">{data.focus_week[0]?.day} — {data.focus_week[data.focus_week.length-1]?.day}</p>
         <div className="chart-scroll"><div style={{gridTemplateColumns:`repeat(${data.focus_week.length}, minmax(42px, 1fr))`}} className="chart-bars" role="img" aria-label={`Концентрация по дням, всего ${minutes} минут. Точные значения в таблице ниже.`}>{data.focus_week.map(row => <div className="chart-day" key={row.day}><span className="chart-number">{row.seconds / 60}</span><div className="chart-track"><span style={{ height: `${row.seconds / max * 100}%` }} /></div><time dateTime={row.day}>{parseDate(row.day).toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' })}</time></div>)}</div></div>
