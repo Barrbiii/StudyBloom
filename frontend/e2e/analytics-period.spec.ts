@@ -1,4 +1,5 @@
 import { test, expect } from '@playwright/test';
+import { readFile } from 'node:fs/promises';
 test('период графика меняется отдельно от сегодняшнего обзора и помещается на телефоне',async({page},info)=>{
   let requests:string[]=[];
   await page.route('**/api/**',async route=>{
@@ -21,6 +22,14 @@ test('период графика меняется отдельно от сег�
   await expect(panel).toContainText('25 минут завершённой концентрации');
   expect(requests.some(s=>s.includes('from_day=2026-10-01')&&s.includes('through=2026-10-31'))).toBe(true);
   await expect(panel.locator('.insight-stats')).toContainText('1 / 2');
+  const downloading=page.waitForEvent('download');
+  await panel.getByRole('button',{name:'Экспорт периода в CSV',exact:true}).click();
+  const download=await downloading;
+  expect(download.suggestedFilename()).toBe('studybloom-focus-2026-10-01-2026-10-31.csv');
+  const path=await download.path();expect(path).toBeTruthy();
+  const csv=await readFile(path!,'utf8');
+  expect(csv.split('\r\n').filter(Boolean)).toHaveLength(32);
+  expect(csv).toContain('"2026-10-01",25,1,"UTC"');
   await page.setViewportSize({width:390,height:844});
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
   await panel.scrollIntoViewIfNeeded();await page.screenshot({path:info.outputPath('analytics-period-mobile.png')});
