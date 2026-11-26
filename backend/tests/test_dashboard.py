@@ -65,3 +65,33 @@ def test_focus_buckets_follow_timezone_including_first_day(client, monkeypatch):
     assert moscow['focus_week'][0] == {'day': '2026-11-19', 'seconds': 60, 'sessions': 1}
     assert new_york['focus_week'][0] == {'day': '2026-11-18', 'seconds': 60, 'sessions': 1}
     assert sum(row['seconds'] for row in moscow['focus_week']) == 120
+
+
+def test_custom_period_and_daily_overview_are_independent(client, fixed):
+    result=client.get('/api/dashboard?from_day=2026-10-01&through=2026-10-31').json()
+    assert result['day'] == '2026-11-24'
+    assert result['focus_period'] == {'from_day':'2026-10-01','through':'2026-10-31','days':31}
+    assert len(result['focus_week']) == 31
+    assert result['focus_week'][0]['day'] == '2026-10-01'
+    assert result['focus_week'][-1]['day'] == '2026-10-31'
+    one=client.get('/api/dashboard?from_day=2026-11-24&through=2026-11-24').json()
+    assert len(one['focus_week']) == 1
+
+
+def test_period_rejects_future_reverse_and_large_ranges(client, fixed):
+    for query in ['from_day=2026-11-25','from_day=2026-11-26&through=2026-11-25','from_day=2026-01-01&through=2026-11-24','from_day=invalid','through=2026-11-25']:
+        assert client.get('/api/dashboard?'+query).status_code == 422
+    assert client.get('/api/dashboard?from_day=2026-08-27&through=2026-11-24').status_code == 200
+
+
+def test_custom_focus_range_uses_inclusive_local_days(client, monkeypatch, fixed):
+    at=datetime(2026,10,31,22,30,tzinfo=timezone.utc)
+    monkeypatch.setattr(focus,'now',lambda:at)
+    item=client.post('/api/pomodoro/sessions',json={'minutes':1}).json()
+    at+=timedelta(seconds=60)
+    client.post(f"/api/pomodoro/sessions/{item['id']}/finish")
+    moscow=client.get('/api/dashboard?tz=Europe/Moscow&from_day=2026-11-01&through=2026-11-01').json()
+    york=client.get('/api/dashboard?tz=America/New_York&from_day=2026-10-31&through=2026-10-31').json()
+    assert moscow['focus_week'][0]['seconds'] == york['focus_week'][0]['seconds'] == 60
+    excluded=client.get('/api/dashboard?tz=Europe/Moscow&from_day=2026-10-31&through=2026-10-31').json()
+    assert excluded['focus_week'][0]['seconds'] == 0
