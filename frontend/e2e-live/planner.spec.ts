@@ -1,5 +1,6 @@
 import { test, expect } from '@playwright/test';
 import { randomUUID } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
 test('реальный Docker: аккаунты, занятия, привычки, Pomodoro и подзадачи', async ({ page }, info) => {
   const password = `Live-${randomUUID()}`;
   const username = `live_${Date.now()}_${randomUUID().slice(0, 8)}`;
@@ -26,6 +27,13 @@ test('реальный Docker: аккаунты, занятия, привычк�
   await page.getByLabel('Преподаватель', { exact: true }).fill('Волков');
   await page.getByRole('button', { name: 'Сохранить занятие', exact: true }).click();
   await expect(page.locator('.calendar-lesson').first()).toContainText('Алгебра интеграция');
+  const repeats=page.getByRole('region',{name:'Повторяющиеся задачи',exact:true});
+  await repeats.getByLabel('Название повторения',{exact:true}).fill('Повторение интеграция');
+  await repeats.getByRole('button',{name:'Создать шаблон',exact:true}).click();
+  await repeats.getByRole('button',{name:'Создать задачи за период',exact:true}).click();
+  await expect(repeats.getByRole('status')).toContainText('Создано задач: 1');
+  await repeats.getByRole('button',{name:'Создать задачи за период',exact:true}).click();
+  await expect(repeats.getByRole('status')).toContainText('Создано задач: 0');
   await page.getByRole('button', { name: 'Добавить привычку', exact: true }).click();
   await page.getByLabel('Название привычки', { exact: true }).fill('Повторить интеграция');
   await page.getByRole('button', { name: 'Сохранить привычку', exact: true }).click();
@@ -40,6 +48,19 @@ test('реальный Docker: аккаунты, занятия, привычк�
   await page.getByRole('button', { name: 'Шаги задачи: Доклад интеграция', exact: true }).click();
   await expect(step).toBeChecked();
   await expect(page.locator('.insight-stats')).toContainText('1 / 1');
+  const analytics=page.getByRole('region',{name:'Обзор и аналитика',exact:true});
+  const today=await page.evaluate(()=>{const d=new Date();return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;});
+  await analytics.getByLabel('Аналитика с',{exact:true}).fill(today);
+  await analytics.getByLabel('Аналитика по',{exact:true}).fill(today);
+  await analytics.getByRole('button',{name:'Применить период',exact:true}).click();
+  await expect(analytics.locator('.chart-day')).toHaveCount(1);
+  const downloading=page.waitForEvent('download');
+  await analytics.getByRole('button',{name:'Экспорт периода в CSV',exact:true}).click();
+  const download=await downloading;
+  expect(download.suggestedFilename()).toBe(`studybloom-focus-${today}-${today}.csv`);
+  const path=await download.path();const csv=await readFile(path!,'utf8');
+  expect(csv.split('\r\n').filter(Boolean)).toHaveLength(2);
+  expect(csv).toContain(`"${today}",0,0,`);
   for (const width of [360, 390, 768]) {
     await page.setViewportSize({ width, height: 844 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
