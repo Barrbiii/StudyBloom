@@ -55,6 +55,7 @@ assert request(f"/recurring-tasks/{repeat['id']}/generate",window)['created'] ==
 focus = request('/pomodoro/sessions', {'minutes': 1})
 request(f"/pomodoro/sessions/{focus['id']}/pause", {})
 assert request('/dashboard?tz=Europe/Moscow')['habits_today']['completed'] == 1
+assert len(request(f"/dashboard?tz=Europe/Moscow&from_day={summary['day']}&through={summary['day']}")['focus_week']) == 1
 assert request('/dashboard?tz=America/New_York')['tasks']['total'] == 2
 subprocess.run(['docker', 'compose', 'restart', 'backend'], check=True)
 healthy()

@@ -46,7 +46,7 @@ export function Insights() {
       <label>Аналитика с<input type="date" required min="1970-01-01" max={draftThrough} value={draftFrom} onChange={e=>setDraftFrom(e.target.value)}/></label>
       <label>Аналитика по<input type="date" required min={draftFrom} max={dateKey(new Date())} value={draftThrough} onChange={e=>setDraftThrough(e.target.value)}/></label>
       <button type="submit" disabled={busy}>Применить период</button>
-      {[7,30,90].map(n=><button key={n} type="button" disabled={busy} onClick={()=>{const through=dateKey(new Date()), from=dateKey(addDays(new Date(),1-n));setDraftFrom(from);setDraftThrough(through);setData(null);setPeriod({from,through});}}>За{n} дней</button>)}
+      {[7,30,90].map(n=><button key={n} type="button" disabled={busy} onClick={()=>{const through=dateKey(new Date()), from=dateKey(addDays(new Date(),1-n));setDraftFrom(from);setDraftThrough(through);setData(null);setPeriod({from,through});}}>За {n} дней</button>)}
     </form>
     <p className="note">Период меняет только историю концентрации. Обзор задач и занятий остаётся на сегодня.</p>
     {error && <p role="alert">{error}</p>}

@@ -79,6 +79,9 @@ def test_postgres_personal_tools(monkeypatch):
             assert result['day_target'] == 10 and result['value'] == 12 and result['current_streak'] == 1
             assert len(habits.history(habit['id'], 30, 'Europe/Moscow', db, user)) == 1
             summary = dashboard.overview('Europe/Moscow', db, user)
+            selected=dashboard.overview('Europe/Moscow',db,user,day,day)
+            assert selected['focus_period']['days'] == 1
+            assert len(selected['focus_week']) == 1
             assert summary['tasks']['total'] == 0
             assert summary['habits_today'] == {'total': 1, 'completed': 1}
             assert len(summary['focus_week']) == 7
