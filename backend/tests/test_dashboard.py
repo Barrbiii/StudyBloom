@@ -79,7 +79,7 @@ def test_custom_period_and_daily_overview_are_independent(client, fixed):
 
 
 def test_period_rejects_future_reverse_and_large_ranges(client, fixed):
-    for query in ['from_day=2026-11-25','from_day=2026-11-26&through=2026-11-25','from_day=2026-01-01&through=2026-11-24','from_day=invalid','through=2026-11-25']:
+    for query in ['from_day=2026-11-25','from_day=2026-11-26&through=2026-11-25','from_day=2026-01-01&through=2026-11-24','from_day=invalid','through=2026-11-25','through=0001-01-01','from_day=0001-01-01&through=0001-01-02']:
         assert client.get('/api/dashboard?'+query).status_code == 422
     assert client.get('/api/dashboard?from_day=2026-08-27&through=2026-11-24').status_code == 200
 

@@ -35,8 +35,10 @@ def overview(tz: str = Query(default='Europe/Moscow', max_length=100),
         Habit.owner_id == user.id, Habit.archived.is_(False), HabitDay.day == day,
         HabitDay.value >= HabitDay.target))
     last = through or day
+    if last < date(1970,1,1):
+        raise HTTPException(422, 'Аналитика доступна для дат с1970 года')
     first = from_day or last - timedelta(days=6)
-    if last > day or not 0 <= (last-first).days <= 89:
+    if first < date(1970,1,1) or last > day or not 0 <= (last-first).days <= 89:
         raise HTTPException(422, 'Выбери от1 до90 дней без будущих дат')
     # Restrict candidates by UTC: final grouping uses the requested local calendar date.
     from datetime import datetime, time
