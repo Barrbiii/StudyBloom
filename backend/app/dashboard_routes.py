@@ -1,7 +1,7 @@
 """Personal overview: daily local schedule and seven calendar days of focus."""
-from datetime import timedelta, timezone
+from datetime import date, timedelta, timezone
 from zoneinfo import ZoneInfo
-from fastapi import APIRouter, Depends, Query
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 from .auth import User, current_user
@@ -17,7 +17,8 @@ router = APIRouter(prefix='/api/dashboard', tags=['Обзор'])
 
 @router.get('')
 def overview(tz: str = Query(default='Europe/Moscow', max_length=100),
-             db: Session = Depends(get_db), user: User = Depends(current_user)):
+             db: Session = Depends(get_db), user: User = Depends(current_user),
+             from_day: date | None = None, through: date | None = None):
     day = today(tz)
     zone = ZoneInfo(tz)
     total = db.scalar(select(func.count(Task.id)).where(Task.owner_id == user.id))
@@ -33,21 +34,26 @@ def overview(tz: str = Query(default='Europe/Moscow', max_length=100),
     habits_done = db.scalar(select(func.count(HabitDay.id)).join(Habit).where(
         Habit.owner_id == user.id, Habit.archived.is_(False), HabitDay.day == day,
         HabitDay.value >= HabitDay.target))
-    first = day - timedelta(days=6)
+    last = through or day
+    if last < date(1970,1,1):
+        raise HTTPException(422, 'Аналитика доступна для дат с1970 года')
+    first = from_day or last - timedelta(days=6)
+    if first < date(1970,1,1) or last > day or not 0 <= (last-first).days <= 89:
+        raise HTTPException(422, 'Выбери от1 до90 дней без будущих дат')
     # Restrict candidates by UTC: final grouping uses the requested local calendar date.
     from datetime import datetime, time
     lower = datetime.combine(first, time.min, tzinfo=zone).astimezone(timezone.utc)
-    upper = datetime.combine(day + timedelta(days=1), time.min, tzinfo=zone).astimezone(timezone.utc)
+    upper = datetime.combine(last + timedelta(days=1), time.min, tzinfo=zone).astimezone(timezone.utc)
     sessions = db.scalars(select(FocusSession).where(FocusSession.owner_id == user.id,
         FocusSession.mode == 'focus', FocusSession.state == 'completed',
         FocusSession.finished_at >= lower, FocusSession.finished_at < upper)).all()
-    buckets = {first + timedelta(days=n): {'seconds': 0, 'sessions': 0} for n in range(7)}
+    buckets = {first + timedelta(days=n): {'seconds': 0, 'sessions': 0} for n in range((last-first).days+1)}
     for item in sessions:
         local_day = utc(item.finished_at).astimezone(zone).date()
         if local_day in buckets:
             buckets[local_day]['seconds'] += item.duration_seconds
             buckets[local_day]['sessions'] += 1
-    return {'day': day, 'timezone': tz, 'tasks': {'total': total, 'completed': completed},
+    return {'day': day, 'timezone': tz, 'focus_period': {'from_day': first, 'through': last, 'days': (last-first).days+1}, 'tasks': {'total': total, 'completed': completed},
         'overdue_deadlines': overdue,
         'upcoming_deadlines': [{'id': d.id, 'title': d.title, 'due_date': d.due_date} for d in deadlines],
         'lessons_today': [{'id': l.id, 'subject': name, 'starts_at': l.starts_at,
