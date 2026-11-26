@@ -101,3 +101,9 @@ main{min-width:0;padding:29px clamp(22px,4vw,60px) 0}.page-header{display:flex;j
 .repeat-list article { border: 1px solid #ddc8bf; border-radius: 14px; padding: 1rem; background: #fffdf7; overflow-wrap: anywhere; }
 .repeat-list button { margin: .5rem .5rem 0 0; }
 @media(max-width:520px) { .repeat-form, .repeat-window { grid-template-columns:minmax(0,1fr); } .repeat-list button { width:100%; } }
+.analytics-period { display:flex;flex-wrap:wrap;gap:.65rem;align-items:end;margin:1rem 0; }
+.analytics-period label { display:grid;gap:.4rem;min-width:0; }
+.analytics-period button { font-size:.85rem; }
+.chart-scroll { overflow-x:auto;max-width:100%; }
+.chart-bars { min-width:max-content; }
+@media(max-width:520px) { .analytics-period label { flex:1 1 130px; } .analytics-period input { width:100%; } }
