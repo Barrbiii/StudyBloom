@@ -95,3 +95,18 @@ def test_custom_focus_range_uses_inclusive_local_days(client, monkeypatch, fixed
     assert moscow['focus_week'][0]['seconds'] == york['focus_week'][0]['seconds'] == 60
     excluded=client.get('/api/dashboard?tz=Europe/Moscow&from_day=2026-10-31&through=2026-10-31').json()
     assert excluded['focus_week'][0]['seconds'] == 0
+
+
+def test_period_counts_both_folds_of_repeated_dst_hour(client, monkeypatch, fixed):
+    zone=ZoneInfo('America/New_York')
+    instants=[datetime(2026,11,1,1,30,tzinfo=zone,fold=fold).astimezone(timezone.utc) for fold in [0,1]]
+    assert (instants[1]-instants[0]).total_seconds() == 3600
+    instants.append(datetime(2026,11,2,0,0,tzinfo=zone).astimezone(timezone.utc))
+    at=instants[0];monkeypatch.setattr(focus,'now',lambda:at)
+    for instant in instants:
+        at=instant
+        item=client.post('/api/pomodoro/sessions',json={'minutes':1}).json()
+        at+=timedelta(seconds=60)
+        client.post(f"/api/pomodoro/sessions/{item['id']}/finish")
+    result=client.get('/api/dashboard?tz=America/New_York&from_day=2026-11-01&through=2026-11-01').json()
+    assert result['focus_week'] == [{'day':'2026-11-01','seconds':120,'sessions':2}]
