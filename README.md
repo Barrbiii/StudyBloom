@@ -31,7 +31,7 @@ docker compose up --build -d
 
 Подробности: [аккаунты](docs/ACCOUNTS.md), [расписание](docs/TIMETABLE.md),
 [повторения задач](docs/RECURRING_TASKS.md), [Pomodoro](docs/POMODORO.md), [привычки](docs/HABITS.md), [аналитика](docs/DASHBOARD.md), [архив](docs/PERSONAL_EXPORT.md),
-[клавиатура и ошибки](docs/ACCESSIBILITY.md).
+[клавиатура и ошибки](docs/ACCESSIBILITY.md), [backup PostgreSQL](docs/BACKUP.md).
 
 План и фактический прогресс: [PROJECT_STATUS.md](PROJECT_STATUS.md).
 Инструкция демонстрации: [docs/LINUX_DEMO.md](docs/LINUX_DEMO.md).
