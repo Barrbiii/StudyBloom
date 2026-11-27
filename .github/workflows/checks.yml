@@ -70,6 +70,8 @@ jobs:
           name: live-browser-screenshots
           path: frontend/test-results-live/
           retention-days: 14
+      - name: Проверить восстановление приватной резервной копии
+        run: STUDYBLOOM_TEST_RESTORE=1 python scripts/verify-restore.py
       - name: Остановить тестовые контейнеры
         if: always()
         run: docker compose down
