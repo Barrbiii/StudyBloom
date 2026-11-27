@@ -1,3 +1,4 @@
+import { friendlyError, requireOk } from './apiErrors';
 import React from 'react';
 import { useEditorFocus } from './useEditorFocus';
 import { apiFetch } from './api';
@@ -29,20 +30,20 @@ export function Habits() {
   React.useEffect(() => { setReady(false); setError(''); setHistory(null); void load().catch(() => setError('Не удалось загрузить привычки. Проверь дату и соединение.')); return () => { loadToken.current++; }; }, [day]);
   async function write(path: string, method: string, data: object) {
     const r = await apiFetch(`/api/habits${path}`, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
-    if (!r.ok) throw Error();
+    await requireOk(r,'Не удалось сохранить привычку.');
   }
   async function save(e: React.FormEvent) {
     e.preventDefault(); if (!draft || busy) return;
     setBusy(true); setError('');
     try { await write(draft.id ? `/${draft.id}` : '', draft.id ? 'PUT' : 'POST', draft); await load(); setDraft(null); }
-    catch { setError('Не удалось сохранить привычку. Проверь название и цель. После первой отметки единицу измерения менять нельзя.'); }
+    catch (error) { setError(friendlyError(error,'Не удалось сохранить привычку. Проверь название и цель.')); }
     finally { setBusy(false); }
   }
   async function mark(item: Habit, value: number) {
     if (busy) return;
     setBusy(true); setError('');
     try { await write(`/${item.id}/days/${day}?tz=${encodeURIComponent(zone)}`, 'PUT', { value }); await load(); setHistory(null); }
-    catch { setError('Не удалось сохранить отметку. Будущие даты и архивные привычки недоступны.'); }
+    catch (error) { setError(friendlyError(error,'Не удалось сохранить отметку. Проверь дату и результат.')); }
     finally { setBusy(false); }
   }
   async function archive(item: Habit) {
