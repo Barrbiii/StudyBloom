@@ -110,3 +110,6 @@ main{min-width:0;padding:29px clamp(22px,4vw,60px) 0}.page-header{display:flex;j
 :where(button,a,input,select,textarea,summary):focus-visible { outline:3px solid #823e5b;outline-offset:3px; }
 [aria-busy=true] { cursor:progress; }
 @media(forced-colors:active) { :where(button,a,input,select,textarea,summary):focus-visible { outline:3px solid Highlight; } .subject-dot,.chart-track span,.habit-progress span { forced-color-adjust:none; } }
+
+.personal-export { margin-top:1.5rem;background:linear-gradient(135deg,#fffaf3,#edf0e3); }
+.personal-export>p { max-width:70ch;line-height:1.7; }

@@ -47,6 +47,8 @@ def test_postgres_personal_tools(monkeypatch):
     from app.database import Base
     from app import subtask_routes as steps
     from app import recurring_routes as repeats
+    from app import export_routes as archive
+    import json
     from app.models import Task
     schema = 'focus_' + uuid.uuid4().hex
     admin = create_engine(os.environ['POSTGRES_TEST_URL'])
@@ -93,6 +95,22 @@ def test_postgres_personal_tools(monkeypatch):
             window = repeats.Window(from_day=day,through=day)
             assert repeats.generate(template['id'],window,db,user)['created'] == 1
             assert repeats.generate(template['id'],window,db,user)['created'] == 0
+            original=archive.build_archive
+            def snapshot_check(snapshot,owner_id,at):
+                assert snapshot.connection().get_isolation_level() == 'REPEATABLE READ'
+                assert snapshot.execute(text('SHOW transaction_read_only')).scalar_one() == 'on'
+                snapshot.execute(select(Task.id)).all()
+                with Session(engine) as writer:
+                    writer.add(habits.Habit(owner_id=1,name='Поздняя запись',target=1,unit='раз'))
+                    writer.commit()
+                result=original(snapshot,owner_id,at)
+                assert len(result['data']['habits']) == 1
+                return result
+            from sqlalchemy import select
+            monkeypatch.setattr(archive,'build_archive',snapshot_check)
+            exported=json.loads(archive.personal(db,user).body)
+            assert exported['format'] == 'studybloom-personal'
+            assert len(exported['data']['subtasks']) == 1
     finally:
         engine.dispose()
         with admin.begin() as conn:
