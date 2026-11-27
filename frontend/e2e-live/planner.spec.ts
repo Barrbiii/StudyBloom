@@ -61,6 +61,15 @@ test('реальный Docker: аккаунты, занятия, привычк�
   const path=await download.path();const csv=await readFile(path!,'utf8');
   expect(csv.split('\r\n').filter(Boolean)).toHaveLength(2);
   expect(csv).toContain(`"${today}",0,0,`);
+  const archiveDownload=page.waitForEvent('download');
+  await page.getByRole('button',{name:'Скачать личный архив JSON',exact:true}).click();
+  const archiveFile=await archiveDownload;const archivePath=await archiveFile.path();
+  const personal=JSON.parse(await readFile(archivePath!,'utf8'));
+  expect(personal.data.tasks.some((t:any)=>t.title==='Доклад интеграция')).toBe(true);
+  expect(personal.data.subtasks[0].completed).toBe(true);
+  expect(personal.data.focus_sessions[0].state).toBe('paused');
+  expect(personal.data.templates[0].title).toBe('Повторение интеграция');
+  expect(JSON.stringify(personal)).not.toContain('password_hash');
   for (const width of [360, 390, 768]) {
     await page.setViewportSize({ width, height: 844 });
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth)).toBe(true);
@@ -77,4 +86,8 @@ test('реальный Docker: аккаунты, занятия, привычк�
   await expect(page.locator('.calendar-lesson')).toHaveCount(0);
   await expect(page.locator('.habit-card')).toHaveCount(0);
   await expect(page.getByRole('button', { name: 'Начать сессию', exact: true })).toBeEnabled();
+  const secondArchive=await page.request.get('/api/export/study');
+  expect(secondArchive.ok()).toBe(true);
+  const secondData=(await secondArchive.json()).data;
+  expect(Object.values(secondData).every((rows:any)=>rows.length===0)).toBe(true);
 });

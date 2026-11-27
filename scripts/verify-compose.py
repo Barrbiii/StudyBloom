@@ -67,5 +67,10 @@ assert request('/habits?tz=Europe/Moscow')[0]['completed'] is True
 assert request('/pomodoro/current')['state'] == 'paused'
 request(f"/pomodoro/sessions/{focus['id']}/cancel", {})
 assert len(request('/pomodoro/history')) == 1
+archive = request('/export/study')
+assert archive['format'] == 'studybloom-personal'
+assert len(archive['data']['tasks']) == 2
+assert archive['data']['subtasks'][0]['completed'] is True
+assert 'password_hash' not in json.dumps(archive)
 request('/auth/logout', {})
 print('Docker smoke: аккаунт, задачи, занятия, привычки, Pomodoro и данные после restart — OK')
