@@ -2,6 +2,7 @@ import { useLessons } from './Lessons';
 import { occursOn } from './lessonDates';
 import { apiFetch } from './api';
 import React from 'react';
+import { useEditorFocus } from './useEditorFocus';
 import { CalendarEvent, EventEditor } from './EventEditor';
 import { calendarDays, dateKey, moveAnchor, parseDate } from './calendarDates';
 
@@ -27,6 +28,7 @@ export function Calendar({ subjects, deadlines, onSaved }: Props) {
   const [editing, setEditing] = React.useState<Deadline | null>(null);
   const [error, setError] = React.useState('');
   const [saving, setSaving] = React.useState(false);
+  const editor = useEditorFocus(editing?.id ?? null, () => setEditing(null), saving);
   const days = calendarDays(anchor, mode);
   const today = dateKey(new Date());
   const title = mode === 'month'
@@ -91,10 +93,10 @@ export function Calendar({ subjects, deadlines, onSaved }: Props) {
       })}
     </div></div>
     {!deadlines.some(item => days.some(day => dateKey(day) === item.due_date) && (!filter || String(item.subject_id) === filter)) && <p className="note">В этом периоде нет дедлайнов. События и занятия показаны отдельно.</p>}
-    {editing && <div className="calendar-editor">
+    {editing && <div ref={editor.ref as React.Ref<HTMLDivElement>} onKeyDown={editor.onKeyDown} className="calendar-editor" role="region" aria-label="Редактор дедлайна" aria-busy={saving}>
       <h3>Редактирование дедлайна</h3>
       <form onSubmit={save}>
-        <label>Название<input autoFocus required maxLength={255} value={editing.title} onChange={e => setEditing({ ...editing, title: e.target.value })} /></label>
+        <label>Название<input required maxLength={255} value={editing.title} onChange={e => setEditing({ ...editing, title: e.target.value })} /></label>
         <label>Дата<input type="date" required value={editing.due_date} onChange={e => setEditing({ ...editing, due_date: e.target.value })} /></label>
         <label>Предмет<select required value={editing.subject_id} onChange={e => setEditing({ ...editing, subject_id: Number(e.target.value) })}>
           {subjects.map(subject => <option key={subject.id} value={subject.id}>{subject.name}</option>)}

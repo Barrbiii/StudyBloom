@@ -1,4 +1,5 @@
 import React from 'react';
+import { useEditorFocus } from './useEditorFocus';
 import { useLessons } from './Lessons';
 import { apiFetch } from './api';
 import { dateKey, addDays } from './calendarDates';
@@ -9,6 +10,7 @@ export function Timetable({ subjects }: { subjects: Subject[] }) {
   const { lessons, draft, setDraft, load, loadError } = useLessons();
   const [error,setError] = React.useState('');
   const [busy,setBusy] = React.useState(false);
+  const editor = useEditorFocus(draft ? draft.id ?? 'new' : null, () => setDraft(null), busy);
   async function save(e: React.FormEvent) {
     e.preventDefault(); if(!draft || busy) return;
     setBusy(true);
@@ -31,7 +33,7 @@ export function Timetable({ subjects }: { subjects: Subject[] }) {
     <button type="button" disabled={!subjects.length || busy} onClick={() => setDraft({ subject_id:subjects[0].id, weekday:0, starts_at:'09:00', ends_at:'10:30', starts_on:dateKey(new Date()), ends_on:dateKey(addDays(new Date(),90)), room:'', teacher:'' })}>Добавить занятие</button>
     {!subjects.length && <p className="note">Сначала добавь предмет.</p>}
     {(error || loadError) && <p role="alert">{error || loadError} <button type="button" onClick={() => void load().catch(() => setError('Сервер недоступен.'))}>Повторить</button></p>}
-    {draft && <form className="lesson-form" onSubmit={save}>
+    {draft && <form ref={editor.ref as React.Ref<HTMLFormElement>} onKeyDown={editor.onKeyDown} className="lesson-form" aria-label="Редактор занятия" aria-busy={busy} onSubmit={save}>
       <label>Предмет занятия<select aria-label="Предмет занятия" required value={draft.subject_id} onChange={e=>setDraft({...draft,subject_id:Number(e.target.value)})}>{subjects.map(s=><option key={s.id} value={s.id}>{s.name}</option>)}</select></label>
       <label>День недели<select aria-label="День недели" value={draft.weekday} onChange={e=>setDraft({...draft,weekday:Number(e.target.value)})}>{days.map((day,i)=><option key={day} value={i}>{day}</option>)}</select></label>
       {fields.map(([key,label,type])=><label key={key}>{label}<input type={type} required={type!=='text'} maxLength={type==='text'?120:undefined} value={draft[key]} onChange={e=>setDraft({...draft,[key]:e.target.value})}/></label>)}

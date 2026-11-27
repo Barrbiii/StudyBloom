@@ -1,4 +1,5 @@
 import React from 'react';
+import { useEditorFocus } from './useEditorFocus';
 import { apiFetch } from './api';
 import { dateKey } from './calendarDates';
 type Habit = { id: number; name: string; target: number; unit: string; archived: boolean; value: number; day_target: number; completed: boolean; current_streak: number; best_streak: number; completed_days: number };
@@ -15,6 +16,7 @@ export function Habits() {
   const [error, setError] = React.useState('');
   const [history, setHistory] = React.useState<{ name: string; rows: Day[] } | null>(null);
   const [values, setValues] = React.useState<Record<number, string>>({});
+  const editor = useEditorFocus(draft ? draft.id ?? 'new' : null, () => setDraft(null), busy);
   const loadToken = React.useRef(0);
   async function load() {
     const token = ++loadToken.current;
@@ -63,7 +65,7 @@ export function Habits() {
       <label className="archive-toggle"><input type="checkbox" checked={archived} onChange={e => setArchived(e.target.checked)} />Показать архив</label>
     </div>
     {error && <p role="alert">{error} <button type="button" disabled={busy} onClick={() => { setError(''); void load().catch(() => setError('Сервер недоступен.')); }}>Повторить загрузку привычек</button></p>}
-    {draft && <form className="habit-form" onSubmit={save}>
+    {draft && <form ref={editor.ref as React.Ref<HTMLFormElement>} onKeyDown={editor.onKeyDown} className="habit-form" aria-label="Редактор привычки" aria-busy={busy} onSubmit={save}>
       <label>Название привычки<input required maxLength={120} value={draft.name} onChange={e => setDraft({ ...draft, name: e.target.value })} /></label>
       <label>Ежедневная цель<input type="number" required min={1} max={10000} step={1} value={draft.target} onChange={e => setDraft({ ...draft, target: Number(e.target.value) })} /></label>
       <label>Единица измерения<input required maxLength={24} value={draft.unit} onChange={e => setDraft({ ...draft, unit: e.target.value })} /></label>
