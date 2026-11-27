@@ -25,3 +25,6 @@ test-results/
 playwright-report/
 
 test-results-live/
+
+# Private database backups contain account hashes/session data.
+backups/
