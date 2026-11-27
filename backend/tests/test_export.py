@@ -8,7 +8,8 @@ def test_personal_archive_contains_related_data_and_no_credentials(client):
     client.post('/api/deadlines',json={'title':'Сдать','subject_id':subject['id'],'due_date':'2026-12-01'})
     client.post('/api/events',json={'title':'Событие','starts_at':'2026-12-01T10:00:00Z','ends_at':'2026-12-01T11:00:00Z','location':'Аудитория'})
     client.post('/api/lessons',json={'subject_id':subject['id'],'weekday':0,'starts_at':'09:00','ends_at':'10:00','starts_on':'2026-01-01','ends_on':'2026-12-31'})
-    client.post('/api/habits',json={'name':'Читать'})
+    habit=client.post('/api/habits',json={'name':'Читать'}).json()
+    client.put(f"/api/habits/{habit['id']}/days/2026-11-27",json={'value':1})
     client.post('/api/pomodoro/sessions',json={'minutes':25})
     template=client.post('/api/recurring-tasks',json={'title':'Повторение','cadence':'daily','starts_on':'2026-11-27'}).json()
     client.post(f"/api/recurring-tasks/{template['id']}/generate",json={'from_day':'2026-11-27','through':'2026-11-27'})
@@ -17,7 +18,7 @@ def test_personal_archive_contains_related_data_and_no_credentials(client):
     assert 'attachment' in response.headers['content-disposition']
     archive=response.json();assert archive['version']==1
     data=archive['data'];assert len(data['tasks'])==2 and data['subtasks'][0]['task_id']==task['id']
-    for name in ['subjects','deadlines','events','lessons','habits','focus_sessions','templates','occurrences']:
+    for name in ['subjects','deadlines','events','lessons','habits','focus_sessions','templates','occurrences','habit_days']:
         assert len(data[name])==1
     text=json.dumps(archive)
     for forbidden in ['password_hash','token_hash','owner_id','active_owner','login_sessions']:
