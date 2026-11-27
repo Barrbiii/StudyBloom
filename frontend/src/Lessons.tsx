@@ -5,14 +5,17 @@ type Store = { lessons: Lesson[]; draft: Lesson | null; setDraft: React.Dispatch
 const Context = React.createContext<Store | null>(null);
 export function LessonsProvider({ children }: { children: React.ReactNode }) {
   const [lessons, setLessons] = React.useState<Lesson[]>([]);
+  const requestId = React.useRef(0);
   const [draft, setDraft] = React.useState<Lesson | null>(null);
   const [loadError, setError] = React.useState('');
   async function load() {
+    const id=++requestId.current;
     const r = await apiFetch('/api/lessons');
     if (!r.ok) throw Error();
-    setLessons(await r.json()); setError('');
+    const data: Lesson[] = await r.json();
+    if(id===requestId.current){setLessons(data);setError('');}
   }
-  React.useEffect(() => { void load().catch(() => setError('Не удалось загрузить расписание.')); }, []);
+  React.useEffect(() => { void load().catch(() => setError('Не удалось загрузить расписание.')); return()=>{requestId.current++;}; }, []);
   return <Context.Provider value={{ lessons, draft, setDraft, load, loadError }}>{children}</Context.Provider>;
 }
 export function useLessons(): Store {

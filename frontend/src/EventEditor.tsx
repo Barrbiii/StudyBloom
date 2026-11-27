@@ -1,3 +1,4 @@
+import { friendlyError, requireOk } from './apiErrors';
 import { apiFetch } from './api';
 import React from 'react';
 import { useEditorFocus } from './useEditorFocus';
@@ -16,7 +17,8 @@ export function EventEditor({ event, onSaved, onClose }: { event: CalendarEvent 
   const editor = useEditorFocus(event?.id ?? 'new', onClose, busy);
   async function save(e: React.FormEvent) {
     e.preventDefault();
-    if (!title.trim() || new Date(end) <= new Date(start)) { setError('Окончание должно быть позже начала.'); return; }
+    if (busy) return;
+    if (!title.trim() || !Number.isFinite(Date.parse(start)) || !Number.isFinite(Date.parse(end)) || new Date(end) <= new Date(start)) { setError('Заполни название и даты. Окончание должно быть позже начала.'); return; }
     await mutate(event ? 'PUT' : 'POST');
   }
   async function mutate(method: string) {
@@ -26,9 +28,9 @@ export function EventEditor({ event, onSaved, onClose }: { event: CalendarEvent 
         method, headers: { 'Content-Type': 'application/json' },
         ...(method === 'DELETE' ? {} : { body: JSON.stringify({ title: title.trim(), starts_at: new Date(start).toISOString(), ends_at: new Date(end).toISOString(), location }) }),
       });
-      if (!response.ok) throw Error();
+      await requireOk(response,'Не удалось изменить событие.');
       await onSaved(); onClose();
-    } catch { setError('Не удалось сохранить изменение. Попробуй снова.'); }
+    } catch (error) { setError(friendlyError(error,'Не удалось сохранить изменение. Попробуй снова.')); }
     finally { setBusy(false); }
   }
   return <section ref={editor.ref as React.Ref<HTMLElement>} onKeyDown={editor.onKeyDown} className="calendar-editor" aria-label="Редактор события" aria-busy={busy}>

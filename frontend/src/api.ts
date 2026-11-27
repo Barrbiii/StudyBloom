@@ -1,6 +1,12 @@
+import { ApiFailure } from './apiErrors';
 /** Учебные запросы сообщают оболочке об истечении/отзыве сессии. */
 export async function apiFetch(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
-  const response = await fetch(input, init);
+  let response: Response;
+  try { response = await fetch(input, init); }
+  catch (error) {
+    if (error instanceof DOMException && error.name === 'AbortError') throw error;
+    throw new ApiFailure('Не удалось подключиться к серверу. Проверь соединение; введённые данные остались в форме.');
+  }
   if (response.status === 401) {
     window.dispatchEvent(new Event('studybloom:session-expired'));
     throw new Error('Необходим повторный вход');

@@ -1,3 +1,4 @@
+import { friendlyError, requireOk } from './apiErrors';
 import React from 'react';
 import { useEditorFocus } from './useEditorFocus';
 import { useLessons } from './Lessons';
@@ -16,9 +17,9 @@ export function Timetable({ subjects }: { subjects: Subject[] }) {
     setBusy(true);
     try {
       const r = await apiFetch(`/api/lessons${draft.id ? `/${draft.id}` : ''}`, { method: draft.id ? 'PUT' : 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(draft) });
-      if(!r.ok) throw Error();
+      await requireOk(r,'Не удалось сохранить занятие.');
       await load(); setDraft(null);
-    } catch { setError('Не удалось сохранить. Проверь время, предмет и диапазон дат.'); }
+    } catch (error) { setError(friendlyError(error,'Не удалось сохранить. Проверь время, предмет и диапазон дат.')); }
     finally { setBusy(false); }
   }
   async function remove(id: number) {

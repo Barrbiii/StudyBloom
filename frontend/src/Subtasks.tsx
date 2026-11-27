@@ -9,9 +9,10 @@ export function Subtasks({ taskId, title }: { taskId: number; title: string }) {
   const [edit, setEdit] = React.useState<Item | null>(null);
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState('');
+  const requestId = React.useRef(0);
   const base = `/api/tasks/${taskId}/subtasks`;
-  async function load() { const r = await apiFetch(base); if (!r.ok) throw Error(); setItems(await r.json()); setReady(true); }
-  React.useEffect(() => { if (open) void load().catch(() => setError('Не удалось загрузить шаги.')); }, [open]);
+  async function load() { const id=++requestId.current; const r = await apiFetch(base); if (!r.ok) throw Error(); const data: Item[]=await r.json(); if(id===requestId.current){setItems(data);setReady(true);} }
+  React.useEffect(() => { if (open) void load().catch(() => setError('Не удалось загрузить шаги.')); return()=>{requestId.current++;}; }, [open]);
   async function write(method: string, suffix: string, data?: object) {
     if (busy) return;
     setBusy(true); setError('');
