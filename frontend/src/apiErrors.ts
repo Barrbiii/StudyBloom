@@ -1,5 +1,8 @@
 /** Only our controlled errors reach the UI; raw validation input and server traces stay private. */
-export class ApiFailure extends Error { constructor(message: string, public status?: number) { super(message); this.name='ApiFailure'; } }
+export class ApiFailure extends Error {
+  status?: number;
+  constructor(message: string, status?: number) { super(message); this.name='ApiFailure'; this.status=status; }
+}
 export async function requireOk(response: Response, fallback: string): Promise<Response> {
   if (response.ok) return response;
   if (response.status === 429) throw new ApiFailure('Слишком много запросов. Подожди немного и попробуй снова.',429);
