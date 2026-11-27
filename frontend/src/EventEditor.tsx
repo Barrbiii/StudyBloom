@@ -1,5 +1,6 @@
 import { apiFetch } from './api';
 import React from 'react';
+import { useEditorFocus } from './useEditorFocus';
 export type CalendarEvent = { id: number; title: string; starts_at: string; ends_at: string; location: string };
 const localTime = (value: string) => {
   const d = new Date(value);
@@ -12,6 +13,7 @@ export function EventEditor({ event, onSaved, onClose }: { event: CalendarEvent 
   const [location, setLocation] = React.useState(event?.location || '');
   const [error, setError] = React.useState('');
   const [busy, setBusy] = React.useState(false);
+  const editor = useEditorFocus(event?.id ?? 'new', onClose, busy);
   async function save(e: React.FormEvent) {
     e.preventDefault();
     if (!title.trim() || new Date(end) <= new Date(start)) { setError('Окончание должно быть позже начала.'); return; }
@@ -29,7 +31,7 @@ export function EventEditor({ event, onSaved, onClose }: { event: CalendarEvent 
     } catch { setError('Не удалось сохранить изменение. Попробуй снова.'); }
     finally { setBusy(false); }
   }
-  return <section className="calendar-editor" aria-label="Редактор события">
+  return <section ref={editor.ref as React.Ref<HTMLElement>} onKeyDown={editor.onKeyDown} className="calendar-editor" aria-label="Редактор события" aria-busy={busy}>
     <h3>{event ? 'Изменить событие' : 'Новое событие'}</h3>
     <p className="note">Время указано в часовом поясе этого устройства.</p>
     <form onSubmit={save}>
