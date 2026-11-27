@@ -1,6 +1,7 @@
 import { apiFetch } from './api';
 import React from 'react';
 import { filterTasks, TaskFilter } from './taskFilters';
+import { PersonalExport } from './PersonalExport';
 import { RecurringTasks } from './RecurringTasks';
 import { Subtasks } from './Subtasks';
 import { LessonsProvider } from './Lessons';
@@ -268,6 +269,7 @@ function App() {
     <Pomodoro />
       <Timetable subjects={subjects} />
     <div id="calendar"><Calendar subjects={subjects} deadlines={deadlines} onSaved={loadStudy} /></div>
+    <PersonalExport />
     <footer><BloomMark /><span>Пусть твои планы расцветают.</span><small>StudyBloom · твой уютный ежедневник</small></footer>
   </main></div>;
 }
