@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from .database import Base, engine, get_db
 from .models import Task
+from .export_routes import router as export_router
 from .recurring_routes import Occurrence, router as recurring_router
 from .subtask_routes import Subtask, router as subtask_router
 from . import study_models  # noqa: F401 — регистрация таблиц
@@ -31,6 +32,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="StudyBloom API", lifespan=lifespan)
+app.include_router(export_router)
 app.include_router(recurring_router)
 app.include_router(subtask_router)
 app.include_router(study_router)
