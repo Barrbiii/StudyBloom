@@ -55,6 +55,7 @@ jobs:
         run: |
           docker compose up -d --wait
           curl --fail --retry 10 --retry-all-errors --retry-delay 2 http://localhost:5173/api/health
+          EXPECTED_ARCH=${{ matrix.arch }} python scripts/verify-platform.py
           STUDYBLOOM_SMOKE=1 python scripts/verify-compose.py
           limited=false
           for attempt in $(seq 1 12); do
