@@ -82,6 +82,8 @@ jobs:
           retention-days: 14
       - name: Проверить восстановление приватной резервной копии
         run: STUDYBLOOM_TEST_RESTORE=1 python scripts/verify-restore.py
+      - name: Проверить потерю БД и восстановление готовности
+        run: STUDYBLOOM_TEST_READINESS=1 python scripts/verify-readiness.py
       - name: Остановить тестовые контейнеры
         if: always()
         run: docker compose down
