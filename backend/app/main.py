@@ -4,7 +4,9 @@ from typing import Literal
 from fastapi import Depends, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
-from sqlalchemy import select
+from sqlalchemy import select, text
+from sqlalchemy.exc import SQLAlchemyError
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 
 from .database import Base, engine, get_db
@@ -74,6 +76,15 @@ class TaskResponse(BaseModel):
 @app.get("/api/health")
 def health():
     return {"status": "ok", "app": "StudyBloom"}
+
+
+@app.get('/api/ready')
+def ready(db: Session = Depends(get_db)):
+    try:
+        db.execute(text('SELECT 1'))
+    except SQLAlchemyError:
+        return JSONResponse({'status':'unavailable'},status_code=503,headers={'Cache-Control':'no-store'})
+    return JSONResponse({'status':'ready'},headers={'Cache-Control':'no-store'})
 
 
 @app.get("/api/tasks", response_model=list[TaskResponse])
