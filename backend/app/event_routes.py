@@ -1,3 +1,4 @@
+from .idempotency import RequestKey, save_created, invalidate_creation
 from datetime import datetime, timezone
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -78,13 +79,10 @@ def list_events(db: Session = Depends(get_db), user: User = Depends(current_user
 
 
 @router.post("", response_model=EventRead, status_code=201)
-def create_event(data: EventWrite, db: Session = Depends(get_db), user: User = Depends(current_user)):
+def create_event(data: EventWrite, db: Session = Depends(get_db), user: User = Depends(current_user), key: RequestKey = None):
     event = CalendarEvent(owner_id=user.id)
     apply_data(event, data)
-    db.add(event)
-    db.commit()
-    db.refresh(event)
-    return event
+    return save_created(db,event,user,key,'/api/events',data)
 
 
 @router.get("/{event_id}", response_model=EventRead)
@@ -103,5 +101,7 @@ def update_event(event_id: int, data: EventWrite, db: Session = Depends(get_db),
 
 @router.delete("/{event_id}", status_code=204)
 def delete_event(event_id: int, db: Session = Depends(get_db), user: User = Depends(current_user)):
-    db.delete(find_event(db, event_id, user))
+    event=find_event(db,event_id,user)
+    invalidate_creation(db,'/api/events',event_id,user.id)
+    db.delete(event)
     db.commit()

@@ -9,6 +9,7 @@ from sqlalchemy.orm import Session
 
 from .database import Base, engine, get_db
 from .models import Task
+from .idempotency import RequestKey, save_created, invalidate_creation
 from .export_routes import router as export_router
 from .recurring_routes import Occurrence, router as recurring_router
 from .subtask_routes import Subtask, router as subtask_router
@@ -91,14 +92,11 @@ def list_tasks(db: Session = Depends(get_db), user: User = Depends(current_user)
 
 
 @app.post("/api/tasks", response_model=TaskResponse, status_code=201)
-def create_task(payload: TaskCreate, db: Session = Depends(get_db), user: User = Depends(current_user)):
+def create_task(payload: TaskCreate, db: Session = Depends(get_db), user: User = Depends(current_user), key: RequestKey = None):
     task = Task(title=payload.title.strip(), owner_id=user.id, priority=payload.priority)
     if not task.title:
         raise HTTPException(status_code=422, detail="Название не может быть пустым")
-    db.add(task)
-    db.commit()
-    db.refresh(task)
-    return task
+    return save_created(db,task,user,key,'/api/tasks',payload)
 
 
 @app.patch("/api/tasks/{task_id}", response_model=TaskResponse)
@@ -129,5 +127,6 @@ def delete_task(task_id: int, db: Session = Depends(get_db), user: User = Depend
     for occurrence in db.scalars(select(Occurrence).where(Occurrence.task_id == task.id)):
         occurrence.task_id = None
     db.flush()
+    invalidate_creation(db,'/api/tasks',task.id,user.id)
     db.delete(task)
     db.commit()
