@@ -1,9 +1,11 @@
 import React from 'react';
+import { CreateIntent } from './CreateIntent';
 import { apiFetch } from './api';
 import { addDays, dateKey } from './calendarDates';
 type Template = { id: number; title: string; priority: string; cadence: string; starts_on: string; ends_on: string | null; paused: boolean };
 const names: Record<string,string> = { daily:'Каждый день', weekly:'Каждую неделю', monthly:'Каждый месяц' };
 export function RecurringTasks({ onGenerated }: { onGenerated: () => Promise<void> }) {
+  const intent=React.useRef(new CreateIntent());
   const [items,setItems]=React.useState<Template[]>([]);
   const [title,setTitle]=React.useState(''); const [cadence,setCadence]=React.useState('weekly');
   const [starts,setStarts]=React.useState(dateKey(new Date())); const [ends,setEnds]=React.useState('');
@@ -13,12 +15,12 @@ export function RecurringTasks({ onGenerated }: { onGenerated: () => Promise<voi
   async function load() { const r=await apiFetch('/api/recurring-tasks'); if(!r.ok) throw Error(); setItems(await r.json()); }
   React.useEffect(()=>{void load().catch(()=>setError('Не удалось загрузить повторения.'));},[]);
   async function write(path: string, method: string, data: object) {
-    const r=await apiFetch('/api/recurring-tasks'+path,{method,headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+    const r=await apiFetch('/api/recurring-tasks'+path,{method,headers:{'Content-Type':'application/json',...(method==='POST'&&path===''?intent.current.headers('/api/recurring-tasks',JSON.stringify(data)): {})},body:JSON.stringify(data)});
     if(!r.ok) throw Error(); return r.json();
   }
   async function create(e: React.FormEvent) {
     e.preventDefault(); if(busy) return; setBusy(true);setError('');setNotice('');
-    try { await write('','POST',{title:title.trim(),cadence,starts_on:starts,ends_on:ends||null,priority}); await load();setTitle(''); }
+    try { await write('','POST',{title:title.trim(),cadence,starts_on:starts,ends_on:ends||null,priority}); await load();intent.current.reset();setTitle(''); }
     catch {setError('Не удалось создать шаблон. Проверь название и даты.');} finally {setBusy(false);}
   }
   async function generate(item: Template) {

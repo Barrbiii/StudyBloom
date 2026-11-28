@@ -1,7 +1,9 @@
 import React from 'react';
+import { CreateIntent } from './CreateIntent';
 import { apiFetch } from './api';
 type Item = { id: number; title: string; completed: boolean };
 export function Subtasks({ taskId, title }: { taskId: number; title: string }) {
+  const intent=React.useRef(new CreateIntent());
   const [open, setOpen] = React.useState(false);
   const [items, setItems] = React.useState<Item[]>([]);
   const [ready, setReady] = React.useState(false);
@@ -17,9 +19,9 @@ export function Subtasks({ taskId, title }: { taskId: number; title: string }) {
     if (busy) return;
     setBusy(true); setError('');
     try {
-      const r = await apiFetch(base+suffix, { method, headers: { 'Content-Type': 'application/json' }, ...(data ? { body: JSON.stringify(data) } : {}) });
+      const r = await apiFetch(base+suffix, { method, headers: { 'Content-Type': 'application/json', ...(method==='POST'?intent.current.headers(base,JSON.stringify(data)): {}) }, ...(data ? { body: JSON.stringify(data) } : {}) });
       if (!r.ok) throw Error();
-      await load(); setDraft(''); setEdit(null);
+      await load(); intent.current.reset(); setDraft(''); setEdit(null);
     } catch { setError('Не удалось сохранить шаг. Проверь название и соединение.'); }
     finally { setBusy(false); }
   }

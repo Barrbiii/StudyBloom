@@ -1,5 +1,6 @@
 import { friendlyError, requireOk } from './apiErrors';
 import React from 'react';
+import { CreateIntent } from './CreateIntent';
 import { useEditorFocus } from './useEditorFocus';
 import { apiFetch } from './api';
 import { dateKey } from './calendarDates';
@@ -8,6 +9,7 @@ type Draft = { id?: number; name: string; target: number; unit: string; archived
 type Day = { day: string; value: number; target: number; completed: boolean };
 const zone = Intl.DateTimeFormat().resolvedOptions().timeZone || 'Europe/Moscow';
 export function Habits() {
+  const intent=React.useRef(new CreateIntent());
   const [day, setDay] = React.useState(dateKey(new Date()));
   const [items, setItems] = React.useState<Habit[]>([]);
   const [draft, setDraft] = React.useState<Draft | null>(null);
@@ -29,13 +31,13 @@ export function Habits() {
   }
   React.useEffect(() => { setReady(false); setError(''); setHistory(null); void load().catch(() => setError('Не удалось загрузить привычки. Проверь дату и соединение.')); return () => { loadToken.current++; }; }, [day]);
   async function write(path: string, method: string, data: object) {
-    const r = await apiFetch(`/api/habits${path}`, { method, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data) });
+    const r = await apiFetch(`/api/habits${path}`, { method, headers: { 'Content-Type': 'application/json', ...(method==='POST'?intent.current.headers('/api/habits'+path,JSON.stringify(data)): {}) }, body: JSON.stringify(data) });
     await requireOk(r,'Не удалось сохранить привычку.');
   }
   async function save(e: React.FormEvent) {
     e.preventDefault(); if (!draft || busy) return;
     setBusy(true); setError('');
-    try { await write(draft.id ? `/${draft.id}` : '', draft.id ? 'PUT' : 'POST', draft); await load(); setDraft(null); }
+    try { await write(draft.id ? `/${draft.id}` : '', draft.id ? 'PUT' : 'POST', draft); await load(); intent.current.reset(); setDraft(null); }
     catch (error) { setError(friendlyError(error,'Не удалось сохранить привычку. Проверь название и цель.')); }
     finally { setBusy(false); }
   }
