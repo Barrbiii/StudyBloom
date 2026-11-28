@@ -26,7 +26,7 @@ try:
     created=True
     with backup.open('rb') as stream:
         container('exec pg_restore -U "$POSTGRES_USER" -d "$1" --exit-on-error --no-owner --no-acl',name,stdin=stream)
-    for table in ['users','login_sessions','tasks','subtasks','subjects','deadlines','calendar_events','lessons','habits','habit_days','focus_sessions','task_templates','task_occurrences']:
+    for table in ['users','login_sessions','tasks','subtasks','subjects','deadlines','calendar_events','lessons','habits','habit_days','focus_sessions','task_templates','task_occurrences','creation_receipts']:
         assert sql(source,f'SELECT count(*) FROM {table}') == sql(name,f'SELECT count(*) FROM {table}'), table
     previous=int(sql(name,'SELECT coalesce(max(id),0) FROM tasks'))
     added=sql(name,"INSERT INTO tasks(owner_id,title,priority,completed,created_at) SELECT min(id),'Restore check','normal',false,now() FROM users RETURNING id")

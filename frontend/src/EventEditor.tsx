@@ -27,7 +27,7 @@ export function EventEditor({ event, onSaved, onClose }: { event: CalendarEvent 
     if(busy)return;
     setBusy(true); setError('');
     try {
-      const body=JSON.stringify({title:title.trim(),starts_at:new Date(start).toISOString(),ends_at:new Date(end).toISOString(),location});
+      const body=method==='DELETE'?'':JSON.stringify({title:title.trim(),starts_at:new Date(start).toISOString(),ends_at:new Date(end).toISOString(),location});
       const response = await apiFetch(`/api/events${event ? `/${event.id}` : ''}`, {
         method, headers: { 'Content-Type': 'application/json', ...(method==='POST'?intent.current.headers('/api/events',body):{}) },
         ...(method === 'DELETE' ? {} : { body: JSON.stringify({ title: title.trim(), starts_at: new Date(start).toISOString(), ends_at: new Date(end).toISOString(), location }) }),

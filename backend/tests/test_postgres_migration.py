@@ -48,6 +48,9 @@ def test_postgres_personal_tools(monkeypatch):
     from app import subtask_routes as steps
     from app import recurring_routes as repeats
     from app import export_routes as archive
+    from app.idempotency import save_created
+    from app.main import TaskCreate
+    from concurrent.futures import ThreadPoolExecutor
     import json
     from app.models import Task
     schema = 'focus_' + uuid.uuid4().hex
@@ -111,6 +114,14 @@ def test_postgres_personal_tools(monkeypatch):
             exported=json.loads(archive.personal(db,user).body)
             assert exported['format'] == 'studybloom-personal'
             assert len(exported['data']['subtasks']) == 1
+            def concurrent_create():
+                with Session(engine) as attempt:
+                    payload=TaskCreate(title='Одновременно')
+                    return save_created(attempt,Task(owner_id=1,title=payload.title),user,'concurrent00000000000000000001','/api/tasks',payload).id
+            with ThreadPoolExecutor(max_workers=2) as executor:
+                ids=list(executor.map(lambda _:concurrent_create(),range(2)))
+            assert ids[0]==ids[1]
+            assert db.execute(select(Task.id).where(Task.title=='Одновременно')).all()==[(ids[0],)]
     finally:
         engine.dispose()
         with admin.begin() as conn:

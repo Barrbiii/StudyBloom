@@ -15,10 +15,10 @@ base = 'http://localhost:5173'
 client = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(http.cookiejar.CookieJar()))
 
 
-def request(path, data=None, method=None):
+def request(path, data=None, method=None, headers=None):
     body = json.dumps(data).encode() if data is not None else None
     req = urllib.request.Request(base + '/api' + path, data=body, method=method,
-        headers={'Content-Type': 'application/json', 'Origin': base})
+        headers={'Content-Type': 'application/json', 'Origin': base, **(headers or {})})
     with client.open(req, timeout=15) as response:
         value = response.read()
         return json.loads(value) if value else None
@@ -39,7 +39,9 @@ healthy()
 credentials = {'username': 'smoke_' + secrets.token_hex(8), 'password': secrets.token_urlsafe(24)}
 request('/auth/register', credentials)
 request('/auth/login', credentials)
-task = request('/tasks', {'title': 'Docker: сохранить данные', 'priority': 'high'})
+task_key={'Idempotency-Key':secrets.token_hex(16)}
+task = request('/tasks', {'title': 'Docker: сохранить данные', 'priority': 'high'},headers=task_key)
+assert request('/tasks', {'title': 'Docker: сохранить данные', 'priority': 'high'},headers=task_key)['id']==task['id']
 step = request(f"/tasks/{task['id']}/subtasks", {'title': 'Docker: маленький шаг'})
 request(f"/tasks/{task['id']}/subtasks/{step['id']}", {'completed': True}, 'PATCH')
 subject = request('/subjects', {'name': 'Docker: учебный предмет'})
