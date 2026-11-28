@@ -1,3 +1,4 @@
+from .idempotency import RequestKey, save_created, invalidate_creation
 """Daily goals keep their historical target when a habit's future goal changes."""
 from datetime import date, datetime, timedelta
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -77,11 +78,9 @@ def base(item):
 
 
 @router.post('', status_code=201)
-def create(data: HabitWrite, db: Session = Depends(get_db), user: User = Depends(current_user)):
+def create(data: HabitWrite, db: Session = Depends(get_db), user: User = Depends(current_user), key: RequestKey = None):
     item = Habit(owner_id=user.id, **data.model_dump())
-    db.add(item)
-    db.commit()
-    db.refresh(item)
+    item=save_created(db,item,user,key,'/api/habits',data)
     return base(item)
 
 

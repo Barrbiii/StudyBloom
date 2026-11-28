@@ -27,6 +27,24 @@ test('реальный Docker: аккаунты, занятия, привычк�
   await page.getByLabel('Преподаватель', { exact: true }).fill('Волков');
   await page.getByRole('button', { name: 'Сохранить занятие', exact: true }).click();
   await expect(page.locator('.calendar-lesson').first()).toContainText('Алгебра интеграция');
+  let lostEventResponse=true;
+  await page.route('**/api/events',async route=>{
+    if(route.request().method()==='POST'&&lostEventResponse){
+      const committed=await route.fetch();expect(committed.status()).toBe(201);
+      lostEventResponse=false;await route.abort('failed');return;
+    }
+    await route.continue();
+  });
+  await page.getByRole('button',{name:'Добавить событие',exact:true}).click();
+  const eventEditor=page.getByRole('region',{name:'Редактор события'});
+  await eventEditor.getByLabel('Название события',{exact:true}).fill('Потерянный ответ интеграция');
+  await eventEditor.getByLabel('Начало',{exact:true}).fill('2026-12-01T10:00');
+  await eventEditor.getByLabel('Окончание',{exact:true}).fill('2026-12-01T11:00');
+  await eventEditor.getByRole('button',{name:'Сохранить событие',exact:true}).click();
+  await expect(eventEditor.getByRole('alert')).toContainText('соединение');
+  await eventEditor.getByRole('button',{name:'Сохранить событие',exact:true}).click();
+  await expect(eventEditor).toHaveCount(0);
+  const committedEvents=await page.request.get('/api/events');expect(await committedEvents.json()).toHaveLength(1);
   const repeats=page.getByRole('region',{name:'Повторяющиеся задачи',exact:true});
   await repeats.getByLabel('Название повторения',{exact:true}).fill('Повторение интеграция');
   await repeats.getByRole('button',{name:'Создать шаблон',exact:true}).click();

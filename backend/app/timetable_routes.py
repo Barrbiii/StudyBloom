@@ -1,3 +1,4 @@
+from .idempotency import RequestKey, save_created, invalidate_creation
 from datetime import date, time
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field, field_validator, model_validator
@@ -74,12 +75,10 @@ def listing(db: Session = Depends(get_db), user: User = Depends(current_user)):
 
 
 @router.post('', response_model=LessonRead, status_code=201)
-def create(data: LessonWrite, db: Session = Depends(get_db), user: User = Depends(current_user)):
+def create(data: LessonWrite, db: Session = Depends(get_db), user: User = Depends(current_user), key: RequestKey = None):
     lesson = Lesson(owner_id=user.id)
     apply(db, lesson, data, user)
-    db.add(lesson)
-    db.commit()
-    db.refresh(lesson)
+    lesson=save_created(db,lesson,user,key,'/api/lessons',data)
     return lesson
 
 
@@ -94,5 +93,7 @@ def update(lesson_id: int, data: LessonWrite, db: Session = Depends(get_db), use
 
 @router.delete('/{lesson_id}', status_code=204)
 def delete(lesson_id: int, db: Session = Depends(get_db), user: User = Depends(current_user)):
-    db.delete(owned(db, lesson_id, user))
+    lesson=owned(db,lesson_id,user)
+    invalidate_creation(db,'/api/lessons',lesson_id,user.id)
+    db.delete(lesson)
     db.commit()

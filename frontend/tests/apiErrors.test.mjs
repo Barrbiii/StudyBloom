@@ -17,3 +17,7 @@ test('ограничение запросов и HTML прокси дают по
   await assert.rejects(()=>requireOk(new Response('<html>private</html>',{status:403}),'Недоступно'),/Недоступно/);
   assert.equal(friendlyError(new Error('raw-secret'),'Безопасно'),'Безопасно');
 });
+
+test('удалённое создание объясняется без предложения создать копию',async()=>{
+  await assert.rejects(()=>requireOk(new Response(JSON.stringify({detail:'Запись уже удалена. Повтор не создаёт её заново'}),{status:410}),'Ошибка'),/уже удалена/);
+});

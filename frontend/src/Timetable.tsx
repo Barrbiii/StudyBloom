@@ -1,5 +1,6 @@
 import { friendlyError, requireOk } from './apiErrors';
 import React from 'react';
+import { CreateIntent } from './CreateIntent';
 import { useEditorFocus } from './useEditorFocus';
 import { useLessons } from './Lessons';
 import { apiFetch } from './api';
@@ -8,6 +9,7 @@ type Subject = { id: number; name: string };
 const days = ['Понедельник','Вторник','Среда','Четверг','Пятница','Суббота','Воскресенье'];
 const fields = [['starts_at','Начало занятия','time'],['ends_at','Конец занятия','time'],['starts_on','С даты','date'],['ends_on','По дату','date'],['room','Аудитория','text'],['teacher','Преподаватель','text']] as const;
 export function Timetable({ subjects }: { subjects: Subject[] }) {
+  const intent=React.useRef(new CreateIntent());
   const { lessons, draft, setDraft, load, loadError } = useLessons();
   const [error,setError] = React.useState('');
   const [busy,setBusy] = React.useState(false);
@@ -16,9 +18,9 @@ export function Timetable({ subjects }: { subjects: Subject[] }) {
     e.preventDefault(); if(!draft || busy) return;
     setBusy(true);
     try {
-      const r = await apiFetch(`/api/lessons${draft.id ? `/${draft.id}` : ''}`, { method: draft.id ? 'PUT' : 'POST', headers: {'Content-Type':'application/json'}, body: JSON.stringify(draft) });
+      const r = await apiFetch(`/api/lessons${draft.id ? `/${draft.id}` : ''}`, { method: draft.id ? 'PUT' : 'POST', headers: {'Content-Type':'application/json',...(!draft.id?intent.current.headers('/api/lessons',JSON.stringify(draft)): {})}, body: JSON.stringify(draft) });
       await requireOk(r,'Не удалось сохранить занятие.');
-      await load(); setDraft(null);
+      await load(); intent.current.reset(); setDraft(null);
     } catch (error) { setError(friendlyError(error,'Не удалось сохранить. Проверь время, предмет и диапазон дат.')); }
     finally { setBusy(false); }
   }

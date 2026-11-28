@@ -1,3 +1,4 @@
+from .idempotency import RequestKey, save_created, invalidate_creation
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy import Boolean, ForeignKey, Integer, String, select
@@ -60,10 +61,10 @@ def listing(task_id: int, db: Session = Depends(get_db), user: User = Depends(cu
     return db.scalars(select(Subtask).where(Subtask.task_id == task_id).order_by(Subtask.id)).all()
 
 @router.post('', response_model=Read, status_code=201)
-def create(task_id: int, data: Create, db: Session = Depends(get_db), user: User = Depends(current_user)):
+def create(task_id: int, data: Create, db: Session = Depends(get_db), user: User = Depends(current_user), key: RequestKey = None):
     parent(db, task_id, user)
     item = Subtask(task_id=task_id, title=data.title)
-    db.add(item); db.commit(); db.refresh(item)
+    item=save_created(db,item,user,key,f'/api/tasks/{task_id}/subtasks',data)
     return item
 
 @router.patch('/{subtask_id}', response_model=Read)
@@ -76,4 +77,6 @@ def update(task_id: int, subtask_id: int, data: Update, db: Session = Depends(ge
 
 @router.delete('/{subtask_id}', status_code=204)
 def delete(task_id: int, subtask_id: int, db: Session = Depends(get_db), user: User = Depends(current_user)):
-    db.delete(owned(db, task_id, subtask_id, user)); db.commit()
+    item=owned(db,task_id,subtask_id,user)
+    invalidate_creation(db,f'/api/tasks/{task_id}/subtasks',subtask_id,user.id)
+    db.delete(item);db.commit()
