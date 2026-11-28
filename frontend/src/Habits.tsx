@@ -19,7 +19,9 @@ export function Habits() {
   const [error, setError] = React.useState('');
   const [history, setHistory] = React.useState<{ name: string; rows: Day[] } | null>(null);
   const [values, setValues] = React.useState<Record<number, string>>({});
-  const editor = useEditorFocus(draft ? draft.id ?? 'new' : null, () => setDraft(null), busy);
+  function closeDraft(){intent.current.reset();setDraft(null);setError('');}
+  function beginDraft(value: Draft){intent.current.reset();setError('');setDraft(value);}
+  const editor = useEditorFocus(draft ? draft.id ?? 'new' : null, closeDraft, busy);
   const loadToken = React.useRef(0);
   async function load() {
     const token = ++loadToken.current;
@@ -64,7 +66,7 @@ export function Habits() {
     <p className="card-kicker">РАСТИ ПО ЧУТЬ-ЧУТЬ</p><h2>Мои маленькие ритуалы</h2>
     <p className="note">Ежедневные цели · часовой пояс {zone}. Сегодня можно ещё продолжить вчерашнюю серию.</p>
     <div className="habit-toolbar"><label>День привычек<input type="date" required max={dateKey(new Date())} value={day} disabled={busy} onChange={e => { if (e.target.value) setDay(e.target.value); }} /></label>
-      <button type="button" disabled={busy} onClick={() => setDraft({ name: '', target: 1, unit: 'раз', archived: false })}>Добавить привычку</button>
+      <button type="button" disabled={busy} onClick={() => beginDraft({ name: '', target: 1, unit: 'раз', archived: false })}>Добавить привычку</button>
       <label className="archive-toggle"><input type="checkbox" checked={archived} onChange={e => setArchived(e.target.checked)} />Показать архив</label>
     </div>
     {error && <p role="alert">{error} <button type="button" disabled={busy} onClick={() => { setError(''); void load().catch(() => setError('Сервер недоступен.')); }}>Повторить загрузку привычек</button></p>}
@@ -72,7 +74,7 @@ export function Habits() {
       <label>Название привычки<input required maxLength={120} value={draft.name} onChange={e => setDraft({ ...draft, name: e.target.value })} /></label>
       <label>Ежедневная цель<input type="number" required min={1} max={10000} step={1} value={draft.target} onChange={e => setDraft({ ...draft, target: Number(e.target.value) })} /></label>
       <label>Единица измерения<input required maxLength={24} value={draft.unit} onChange={e => setDraft({ ...draft, unit: e.target.value })} /></label>
-      <button type="submit" disabled={busy}>Сохранить привычку</button><button type="button" disabled={busy} onClick={() => setDraft(null)}>Отмена</button>
+      <button type="submit" disabled={busy}>Сохранить привычку</button><button type="button" disabled={busy} onClick={closeDraft}>Отмена</button>
     </form>}
     {!ready && !error && <p role="status">Загружаем твои ритуалы…</p>}
     {ready && <div className="habit-grid">{items.filter(h => h.archived === archived).map(item => <article className={`habit-card ${item.completed ? 'is-done' : ''}`} key={item.id}>
@@ -83,7 +85,7 @@ export function Habits() {
         <label>Результат: {item.name}<input type="number" required min={0} max={100000} step={1} value={values[item.id] ?? ''} onChange={e => setValues({ ...values, [item.id]: e.target.value })} /></label><button type="submit" disabled={busy}>Сохранить результат</button>
         <button type="button" disabled={busy} onClick={() => void mark(item, item.completed ? 0 : item.day_target)}>{item.completed ? 'Снять отметку' : 'Выполнено'}</button>
       </form>}
-      <div className="habit-actions"><button type="button" disabled={busy} onClick={() => setDraft(item)}>Изменить привычку</button><button type="button" disabled={busy} onClick={() => void archive(item)}>{item.archived ? 'Вернуть из архива' : 'В архив'}</button><button type="button" disabled={busy} onClick={() => void openHistory(item)}>История привычки</button></div>
+      <div className="habit-actions"><button type="button" disabled={busy} onClick={() => beginDraft(item)}>Изменить привычку</button><button type="button" disabled={busy} onClick={() => void archive(item)}>{item.archived ? 'Вернуть из архива' : 'В архив'}</button><button type="button" disabled={busy} onClick={() => void openHistory(item)}>История привычки</button></div>
     </article>)}</div>}
     {ready && !items.some(h => h.archived === archived) && <p className="note">{archived ? 'Архив пуст.' : 'Добавь первый ритуал — даже маленькая цель имеет значение.'}</p>}
     {history && <div className="habit-history" role="region" aria-label="История привычки"><h3>{history.name}: последние 30 дней</h3><button type="button" onClick={() => setHistory(null)}>Закрыть историю</button><ul>{history.rows.map(row => <li key={row.day}><time>{row.day}</time> · {row.value} / {row.target} {row.completed ? '✓' : '—'}</li>)}</ul>{!history.rows.length && <p className="note">Отметок за этот период нет.</p>}</div>}
