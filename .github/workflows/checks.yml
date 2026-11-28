@@ -37,7 +37,16 @@ jobs:
           npm run build
 
   docker:
-    runs-on: ubuntu-latest
+    name: docker (${{ matrix.arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
       - name: Собрать контейнеры
@@ -67,7 +76,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: live-browser-screenshots
+          name: live-browser-screenshots-${{ matrix.arch }}
           path: frontend/test-results-live/
           retention-days: 14
       - name: Проверить восстановление приватной резервной копии
