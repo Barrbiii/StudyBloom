@@ -1,5 +1,6 @@
 import { apiFetch } from './api';
 import React from 'react';
+import { CreateIntent } from './CreateIntent';
 import { filterTasks, TaskFilter } from './taskFilters';
 import { PersonalExport } from './PersonalExport';
 import { RecurringTasks } from './RecurringTasks';
@@ -22,6 +23,7 @@ type Deadline = { id: number; title: string; due_date: string; subject_id: numbe
 const API = '/api/tasks';
 
 function App() {
+  const taskIntent=React.useRef(new CreateIntent()),subjectIntent=React.useRef(new CreateIntent()),deadlineIntent=React.useRef(new CreateIntent());
   const [tasks, setTasks] = React.useState<Task[]>([]);
   const [search, setSearch] = React.useState('');
   const [statusFilter, setStatusFilter] = React.useState<TaskFilter>('all');
@@ -72,10 +74,11 @@ function App() {
     if (!subjectDraft.trim()) return;
     try {
       const response = await apiFetch('/api/subjects', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json', ...subjectIntent.current.headers('/api/subjects',JSON.stringify({name:subjectDraft.trim()})) },
         body: JSON.stringify({ name: subjectDraft.trim() }),
       });
       if (!response.ok) throw new Error();
+      subjectIntent.current.reset();
       setSubjectDraft('');
       await loadStudy();
     } catch { setError('Не удалось добавить предмет.'); }
@@ -86,13 +89,14 @@ function App() {
     if (!deadlineDraft.trim() || !deadlineDate || !selectedSubject) return;
     try {
       const response = await apiFetch('/api/deadlines', {
-        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        method: 'POST', headers: { 'Content-Type': 'application/json', ...deadlineIntent.current.headers('/api/deadlines',JSON.stringify({title:deadlineDraft.trim(),due_date:deadlineDate,subject_id:Number(selectedSubject)})) },
         body: JSON.stringify({
           title: deadlineDraft.trim(), due_date: deadlineDate,
           subject_id: Number(selectedSubject),
         }),
       });
       if (!response.ok) throw new Error();
+      deadlineIntent.current.reset();
       setDeadlineDraft('');
       setDeadlineDate('');
       await loadStudy();
@@ -114,10 +118,11 @@ function App() {
     try {
       const response = await apiFetch(API, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: { 'Content-Type': 'application/json', ...taskIntent.current.headers(API,JSON.stringify({title,priority:newPriority})) },
         body: JSON.stringify({ title, priority: newPriority }),
       });
       if (!response.ok) throw new Error();
+      taskIntent.current.reset();
       setDraft('');
       await loadTasks();
     } catch {

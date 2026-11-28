@@ -1,6 +1,7 @@
 import { friendlyError, requireOk } from './apiErrors';
 import { apiFetch } from './api';
 import React from 'react';
+import { CreateIntent } from './CreateIntent';
 import { useEditorFocus } from './useEditorFocus';
 export type CalendarEvent = { id: number; title: string; starts_at: string; ends_at: string; location: string };
 const localTime = (value: string) => {
@@ -8,6 +9,7 @@ const localTime = (value: string) => {
   return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}T${String(d.getHours()).padStart(2,'0')}:${String(d.getMinutes()).padStart(2,'0')}`;
 };
 export function EventEditor({ event, onSaved, onClose }: { event: CalendarEvent | null; onSaved: () => Promise<void>; onClose: () => void }) {
+  const intent=React.useRef(new CreateIntent());
   const [title, setTitle] = React.useState(event?.title || '');
   const [start, setStart] = React.useState(event ? localTime(event.starts_at) : '');
   const [end, setEnd] = React.useState(event ? localTime(event.ends_at) : '');
@@ -22,14 +24,16 @@ export function EventEditor({ event, onSaved, onClose }: { event: CalendarEvent 
     await mutate(event ? 'PUT' : 'POST');
   }
   async function mutate(method: string) {
+    if(busy)return;
     setBusy(true); setError('');
     try {
+      const body=JSON.stringify({title:title.trim(),starts_at:new Date(start).toISOString(),ends_at:new Date(end).toISOString(),location});
       const response = await apiFetch(`/api/events${event ? `/${event.id}` : ''}`, {
-        method, headers: { 'Content-Type': 'application/json' },
+        method, headers: { 'Content-Type': 'application/json', ...(method==='POST'?intent.current.headers('/api/events',body):{}) },
         ...(method === 'DELETE' ? {} : { body: JSON.stringify({ title: title.trim(), starts_at: new Date(start).toISOString(), ends_at: new Date(end).toISOString(), location }) }),
       });
       await requireOk(response,'Не удалось изменить событие.');
-      await onSaved(); onClose();
+      await onSaved(); intent.current.reset(); onClose();
     } catch (error) { setError(friendlyError(error,'Не удалось сохранить изменение. Попробуй снова.')); }
     finally { setBusy(false); }
   }
