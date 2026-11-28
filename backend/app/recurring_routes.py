@@ -1,3 +1,4 @@
+from .idempotency import RequestKey, save_created, invalidate_creation
 from datetime import date
 from typing import Literal
 from fastapi import APIRouter, Depends, HTTPException
@@ -77,9 +78,9 @@ def listing(db: Session = Depends(get_db), user: User = Depends(current_user)):
     return [view(item) for item in db.scalars(select(Template).where(Template.owner_id == user.id).order_by(Template.id))]
 
 @router.post('', status_code=201)
-def create(data: Write, db: Session = Depends(get_db), user: User = Depends(current_user)):
+def create(data: Write, db: Session = Depends(get_db), user: User = Depends(current_user), key: RequestKey = None):
     item = Template(owner_id=user.id, **data.model_dump())
-    db.add(item); db.commit(); db.refresh(item)
+    item=save_created(db,item,user,key,'/api/recurring-tasks',data)
     return view(item)
 
 @router.patch('/{template_id}')

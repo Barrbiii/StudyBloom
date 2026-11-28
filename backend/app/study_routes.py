@@ -1,3 +1,4 @@
+from .idempotency import RequestKey, save_created, invalidate_creation
 from datetime import date
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -40,14 +41,11 @@ def list_subjects(db: Session = Depends(get_db), user: User = Depends(current_us
 
 
 @router.post("/subjects", response_model=SubjectRead, status_code=201)
-def add_subject(data: SubjectCreate, db: Session = Depends(get_db), user: User = Depends(current_user)):
+def add_subject(data: SubjectCreate, db: Session = Depends(get_db), user: User = Depends(current_user), key: RequestKey = None):
     subject = Subject(name=data.name.strip(), color=data.color, owner_id=user.id)
     if not subject.name:
         raise HTTPException(422, "Название не может быть пустым")
-    db.add(subject)
-    db.commit()
-    db.refresh(subject)
-    return subject
+    return save_created(db,subject,user,key,'/api/subjects',data)
 
 
 @router.delete("/subjects/{subject_id}", status_code=204)
@@ -59,6 +57,7 @@ def remove_subject(subject_id: int, db: Session = Depends(get_db), user: User = 
         raise HTTPException(409, "Сначала удалите или перенесите дедлайны этого предмета")
     if db.scalar(select(Lesson.id).where(Lesson.subject_id == subject_id).limit(1)) is not None:
         raise HTTPException(409, "Сначала удалите занятия этого предмета")
+    invalidate_creation(db,'/api/subjects',subject.id,user.id)
     db.delete(subject)
     db.commit()
 
@@ -69,17 +68,14 @@ def list_deadlines(db: Session = Depends(get_db), user: User = Depends(current_u
 
 
 @router.post("/deadlines", response_model=DeadlineRead, status_code=201)
-def add_deadline(data: DeadlineCreate, db: Session = Depends(get_db), user: User = Depends(current_user)):
+def add_deadline(data: DeadlineCreate, db: Session = Depends(get_db), user: User = Depends(current_user), key: RequestKey = None):
     subject = db.get(Subject, data.subject_id)
     if subject is None or subject.owner_id != user.id:
         raise HTTPException(404, "Предмет не найден")
     deadline = Deadline(owner_id=user.id, title=data.title.strip(), due_date=data.due_date, subject_id=data.subject_id)
     if not deadline.title:
         raise HTTPException(422, "Название не может быть пустым")
-    db.add(deadline)
-    db.commit()
-    db.refresh(deadline)
-    return deadline
+    return save_created(db,deadline,user,key,'/api/deadlines',data)
 
 
 @router.delete("/deadlines/{deadline_id}", status_code=204)
@@ -87,6 +83,7 @@ def remove_deadline(deadline_id: int, db: Session = Depends(get_db), user: User 
     deadline = db.get(Deadline, deadline_id)
     if deadline is None or deadline.owner_id != user.id:
         raise HTTPException(404, "Дедлайн не найден")
+    invalidate_creation(db,'/api/deadlines',deadline.id,user.id)
     db.delete(deadline)
     db.commit()
 
