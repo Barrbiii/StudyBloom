@@ -37,7 +37,16 @@ jobs:
           npm run build
 
   docker:
-    runs-on: ubuntu-latest
+    name: docker (${{ matrix.arch }})
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - arch: amd64
+            runner: ubuntu-24.04
+          - arch: arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
       - name: Собрать контейнеры
@@ -46,6 +55,7 @@ jobs:
         run: |
           docker compose up -d --wait
           curl --fail --retry 10 --retry-all-errors --retry-delay 2 http://localhost:5173/api/health
+          EXPECTED_ARCH=${{ matrix.arch }} python scripts/verify-platform.py
           STUDYBLOOM_SMOKE=1 python scripts/verify-compose.py
           limited=false
           for attempt in $(seq 1 12); do
@@ -67,7 +77,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: live-browser-screenshots
+          name: live-browser-screenshots-${{ matrix.arch }}
           path: frontend/test-results-live/
           retention-days: 14
       - name: Проверить восстановление приватной резервной копии
